@@ -46,11 +46,11 @@ class CreateWishController implements RequestHandlerInterface
         $to = User::query()->find((int) Arr::get($body, 'userId'));
         $today = $this->config->today();
 
-        if (! in_array($kind, Wish::KINDS, true) || ! $to || $to->id === $actor->id || ! $this->celebrating($to, $kind, $actor, $today)) {
+        $year = in_array($kind, Wish::KINDS, true) && $to && $to->id !== $actor->id ? $this->celebrating($to, $kind, $actor, $today) : null;
+
+        if ($year === null) {
             throw new ValidationException(['wish' => $this->translator->trans('ernestdefoe-fanfare.api.not_their_day')]);
         }
-
-        $year = (int) $today->format('Y');
 
         try {
             $wish = new Wish();
@@ -65,24 +65,36 @@ class CreateWishController implements RequestHandlerInterface
             return new JsonResponse(['wished' => true]);
         }
 
-        $this->notifications->sync(new WishBlueprint($actor, $kind, $year), [$to]);
+        $this->notifications->sync(new WishBlueprint($actor, $to->id, $kind, $year), [$to]);
 
         return new JsonResponse(['wished' => true], 201);
     }
 
-    /** Whether $to celebrates $kind around today and lets the actor see it. */
-    protected function celebrating(User $to, string $kind, User $actor, \DateTimeImmutable $today): bool
+    /**
+     * The year of the occasion when $to celebrates $kind around today, shows it
+     * to the actor and is a member in good standing; null otherwise. The wish is
+     * filed under that year, so a member wished on New Year's Eve in one
+     * timezone can't be wished again on New Year's Day in another.
+     */
+    protected function celebrating(User $to, string $kind, User $actor, \DateTimeImmutable $today): ?int
     {
+        if (! $this->people->isListable($to)) {
+            return null;
+        }
+
         if ($kind === 'anniversary') {
-            return $to->joined_at !== null
-                && in_array($to->joined_at->format('m-d'), People::window($today), true)
-                && $this->people->yearsAt($to->joined_at, $today) !== null;
+            if ($to->joined_at === null || ! $this->people->anniversaryShown($to) || $this->people->yearsAt($to->joined_at, $today) === null) {
+                return null;
+            }
+
+            return People::celebratedYear($to->joined_at->format('m-d'), $today);
         }
 
         $shown = $this->config->datlechin()
             ? $to->getAttribute('show_birthday') && $actor->hasPermission('user.viewBirthday')
             : (int) $to->getAttribute('fanfare_birthday_visibility') > 0;
+        $md = $this->people->birthdayOf($to);
 
-        return $shown && in_array($this->people->birthdayOf($to), People::window($today), true);
+        return $shown && $md !== null ? People::celebratedYear($md, $today) : null;
     }
 }

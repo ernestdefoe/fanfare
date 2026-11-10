@@ -42,6 +42,11 @@ class Config
         return $this->extensions->isEnabled('datlechin-birthdays');
     }
 
+    public function suspend(): bool
+    {
+        return $this->extensions->isEnabled('flarum-suspend');
+    }
+
     /**
      * The forum's timezone: Fanfare's own setting, else Festoon's (so the two
      * change over at the same midnight), else the server's.
@@ -131,7 +136,10 @@ class Config
     /** A fingerprint of everything that changes what today looks like. */
     public function hash(): string
     {
-        return substr(md5(json_encode([$this->occasions(), $this->forumBirthday(), $this->milestonesOnly(), $this->festoon(), $this->datlechin(), $this->timezone()->getName()]) ?: ''), 0, 8);
+        // Festoon's looks carry the admin's date overrides, which change Festoon-sourced dates.
+        $festoon = $this->festoon() ? (string) $this->settings->get('ernestdefoe-festoon.looks', '') : '';
+
+        return substr(md5(json_encode([$this->occasions(), $this->forumBirthday(), $this->milestonesOnly(), $festoon, $this->datlechin(), $this->suspend(), $this->timezone()->getName()]) ?: ''), 0, 8);
     }
 
     protected function hhmm(string $key): ?string

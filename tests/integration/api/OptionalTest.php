@@ -25,7 +25,11 @@ class OptionalTest extends TestCase
     {
         parent::setUp();
 
-        $with = str_contains($this->name(), 'datlechin') ? ['datlechin-birthdays'] : ['flarum-gdpr'];
+        $with = match (true) {
+            str_contains($this->name(), 'datlechin') => ['datlechin-birthdays'],
+            str_contains($this->name(), 'suspend') => ['flarum-suspend'],
+            default => ['flarum-gdpr'],
+        };
         $this->extension(...[...$with, 'ernestdefoe-fanfare']);
         $this->md = (new DateTimeImmutable('today'))->format('m-d');
         $born = ((int) date('Y') - 30).'-'.$this->md;
@@ -71,6 +75,20 @@ class OptionalTest extends TestCase
         $wish = $this->send($this->request('POST', '/api/fanfare/wishes', ['authenticatedAs' => 2, 'json' => ['userId' => 4, 'kind' => 'birthday']]));
         $this->assertSame(422, $wish->getStatusCode(), 'a birthday hidden in datlechin is not wishable');
         $this->assertSame(201, $this->send($this->request('POST', '/api/fanfare/wishes', ['authenticatedAs' => 2, 'json' => ['userId' => 3, 'kind' => 'birthday']]))->getStatusCode());
+    }
+
+    #[Test]
+    public function with_suspend_a_suspended_member_is_not_listed_or_wishable()
+    {
+        $this->database()->table('users')->where('id', 3)->update(['suspended_until' => (new DateTimeImmutable('+3 days'))->format('Y-m-d H:i:s')]);
+
+        $this->assertNull($this->people(2));
+        $this->assertSame(422, $this->send($this->request('POST', '/api/fanfare/wishes', ['authenticatedAs' => 2, 'json' => ['userId' => 3, 'kind' => 'birthday']]))->getStatusCode());
+
+        // Once the suspension is over, they're back.
+        $this->database()->table('users')->where('id', 3)->update(['suspended_until' => (new DateTimeImmutable('-1 day'))->format('Y-m-d H:i:s')]);
+        $this->app()->getContainer()->make(\ErnestDefoe\Fanfare\People::class)->forget();
+        $this->assertSame([3], array_column($this->people(2), 'id'));
     }
 
     #[Test]

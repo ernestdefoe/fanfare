@@ -75,6 +75,64 @@ class People
         return $md === '02-29' && ! checkdate(2, 29, $year) ? '02-28' : $md;
     }
 
+    /**
+     * Members the day's lists may show: confirmed, and not suspended right now.
+     *
+     * @param Builder<User> $query
+     * @return Builder<User>
+     */
+    public function listable(Builder $query): Builder
+    {
+        $query->where('users.is_email_confirmed', true);
+
+        if ($this->config->suspend()) {
+            $query->where(fn (Builder $q) => $q->whereNull('users.suspended_until')->orWhere('users.suspended_until', '<=', Carbon::now()));
+        }
+
+        return $query;
+    }
+
+    public function isListable(User $user): bool
+    {
+        if (! $user->is_email_confirmed) {
+            return false;
+        }
+
+        $until = $this->config->suspend() ? $user->getAttribute('suspended_until') : null;
+
+        return ! $until || Carbon::parse($until)->lte(Carbon::now());
+    }
+
+    /** Whether a member lets others see their join anniversary: "nobody" on their birthday hides it too. */
+    public function anniversaryShown(User $user): bool
+    {
+        if ($this->config->datlechin()) {
+            return true;
+        }
+
+        $v = $user->getAttribute('fanfare_birthday_visibility');
+
+        return $v === null || (int) $v > 0;
+    }
+
+    /**
+     * The year of the day a month-day is celebrated on, within yesterday to tomorrow,
+     * so a Dec 31 birthday seen on Jan 1 belongs to last year. Null when it isn't in the window.
+     */
+    public static function celebratedYear(string $md, DateTimeImmutable $today): ?int
+    {
+        foreach (['-1 day', 'today', '+1 day'] as $step) {
+            $day = $today->modify($step);
+            $year = (int) $day->format('Y');
+
+            if (self::observed($md, $year) === $day->format('m-d')) {
+                return $year;
+            }
+        }
+
+        return null;
+    }
+
     /** A month-day expression for a date column, for each database Flarum runs on. */
     public static function monthDay(QueryBuilder $query, string $column): Expression
     {
@@ -171,7 +229,7 @@ class People
      */
     protected function birthdays(array $mds, DateTimeImmutable $today): array
     {
-        $query = User::query()->where('is_email_confirmed', true);
+        $query = $this->listable(User::query());
 
         if ($this->config->datlechin()) {
             $query->where('show_birthday', true)
@@ -203,10 +261,13 @@ class People
      */
     protected function anniversaries(array $mds, DateTimeImmutable $today): array
     {
-        $query = User::query()
-            ->where('is_email_confirmed', true)
+        $query = $this->listable(User::query())
             ->where('joined_at', '<', $today->modify('-300 days')->format('Y-m-d'));
         $query->whereIn(self::monthDay($query->getQuery(), 'users.joined_at'), $mds);
+
+        if (! $this->config->datlechin()) {
+            $query->where(fn (Builder $q) => $q->whereNull('fanfare_birthday_visibility')->orWhere('fanfare_birthday_visibility', '>', 0));
+        }
 
         [$rows, $more] = $this->take($query, ['id', 'joined_at']);
         $list = [];

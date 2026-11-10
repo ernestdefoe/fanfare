@@ -5,6 +5,7 @@ namespace ErnestDefoe\Fanfare\Tests\integration\api;
 use DateTimeImmutable;
 use ErnestDefoe\Fanfare\Config;
 use ErnestDefoe\Fanfare\Occasions;
+use ErnestDefoe\Fanfare\People;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use Flarum\User\User;
@@ -35,9 +36,12 @@ class FanfareTest extends TestCase
                 ['id' => 3, 'username' => 'mira', 'email' => 'mira@machine.local', 'is_email_confirmed' => 1, 'joined_at' => '2020-01-01', 'fanfare_birthday' => $this->md, 'fanfare_birth_year' => 1995, 'fanfare_birthday_visibility' => 2],
                 ['id' => 4, 'username' => 'quiet', 'email' => 'quiet@machine.local', 'is_email_confirmed' => 1, 'joined_at' => '2020-01-01', 'fanfare_birthday' => $this->md, 'fanfare_birthday_visibility' => 0],
                 ['id' => 5, 'username' => 'tobi', 'email' => 'tobi@machine.local', 'is_email_confirmed' => 1, 'joined_at' => $joined],
+                ['id' => 7, 'username' => 'nora', 'email' => 'nora@machine.local', 'is_email_confirmed' => 1, 'joined_at' => '2020-01-01', 'fanfare_birthday' => $this->md, 'fanfare_birthday_visibility' => 1],
+                ['id' => 8, 'username' => 'hermit', 'email' => 'hermit@machine.local', 'is_email_confirmed' => 1, 'joined_at' => $joined, 'fanfare_birthday_visibility' => 0],
+                ['id' => 9, 'username' => 'unconfirmed', 'email' => 'unconfirmed@machine.local', 'is_email_confirmed' => 0, 'joined_at' => '2020-01-01', 'fanfare_birthday' => $this->md, 'fanfare_birthday_visibility' => 1],
                 ['id' => 6, 'username' => 'later', 'email' => 'later@machine.local', 'is_email_confirmed' => 1, 'joined_at' => '2020-01-01', 'fanfare_birthday' => $other, 'fanfare_birthday_visibility' => 1],
             ],
-            'group_user' => [['user_id' => 3, 'group_id' => 3], ['user_id' => 4, 'group_id' => 3], ['user_id' => 5, 'group_id' => 3], ['user_id' => 6, 'group_id' => 3]],
+            'group_user' => array_map(fn ($id) => ['user_id' => $id, 'group_id' => 3], [3, 4, 5, 6, 7, 8, 9]),
         ]);
 
         // Holidays off, so "a normal day" doesn't depend on the date the tests run.
@@ -89,7 +93,8 @@ class FanfareTest extends TestCase
         $this->assertNotContains(4, $ids, 'a hidden birthday is never listed');
         $this->assertNotContains(6, $ids);
         $this->assertSame(31 + ((int) date('Y') - 2026), $data['people']['birthdays'][array_search(3, $ids)]['age']);
-        $this->assertSame([5], array_column($data['people']['anniversaries'], 'id'));
+        $this->assertSame([5], array_column($data['people']['anniversaries'], 'id'), '"nobody" hides the join anniversary too');
+        $this->assertNotContains(9, $ids, 'unconfirmed members are not listed');
         $this->assertSame(3, $data['people']['anniversaries'][0]['years']);
         $this->assertTrue($data['canWish']);
     }
@@ -119,13 +124,19 @@ class FanfareTest extends TestCase
         $this->assertSame(1, $this->database()->table('fanfare_wishes')->count());
         $this->assertSame(1, $this->database()->table('notifications')->where('type', 'fanfareWish')->where('user_id', 3)->count());
 
+        // A second person wished: both keep their alert.
+        $this->assertSame(201, $this->send($this->request('POST', '/api/fanfare/wishes', ['authenticatedAs' => 2, 'json' => ['userId' => 7, 'kind' => 'birthday']]))->getStatusCode());
+        foreach ([3, 7] as $to) {
+            $this->assertSame(1, $this->database()->table('notifications')->where('type', 'fanfareWish')->where('user_id', $to)->where('is_deleted', false)->count(), "alert for $to");
+        }
+
         $this->assertContains('birthday:3', $this->payload(2)['wished']);
     }
 
     #[Test]
     public function you_cannot_wish_someone_whose_day_it_is_not_or_who_hides_it()
     {
-        foreach ([[6, 'birthday'], [4, 'birthday'], [2, 'birthday'], [3, 'anniversary'], [3, 'nonsense']] as [$to, $kind]) {
+        foreach ([[6, 'birthday'], [4, 'birthday'], [2, 'birthday'], [3, 'anniversary'], [3, 'nonsense'], [8, 'anniversary'], [9, 'birthday']] as [$to, $kind]) {
             $response = $this->send($this->request('POST', '/api/fanfare/wishes', ['authenticatedAs' => 2, 'json' => ['userId' => $to, 'kind' => $kind]]));
             $this->assertSame(422, $response->getStatusCode(), "$to $kind");
         }
@@ -176,6 +187,23 @@ class FanfareTest extends TestCase
         $this->assertSame(6, $forum['age']);
         $this->assertSame(1, $forum['discussions']);
         $this->assertSame(1, $forum['posts']);
+    }
+
+    #[Test]
+    public function without_view_forum_nobody_is_listed()
+    {
+        $this->database()->table('group_permission')->where('permission', 'viewForum')->delete();
+
+        $this->assertArrayNotHasKey('people', $this->payload(2) ?? []);
+    }
+
+    #[Test]
+    public function a_wish_belongs_to_the_year_of_the_day_celebrated()
+    {
+        $this->assertSame(2026, People::celebratedYear('12-31', new DateTimeImmutable('2027-01-01')));
+        $this->assertSame(2027, People::celebratedYear('01-01', new DateTimeImmutable('2026-12-31')));
+        $this->assertSame(2027, People::celebratedYear('02-29', new DateTimeImmutable('2027-02-28')));
+        $this->assertNull(People::celebratedYear('06-15', new DateTimeImmutable('2027-02-28')));
     }
 
     #[Test]

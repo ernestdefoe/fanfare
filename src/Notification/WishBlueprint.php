@@ -10,10 +10,13 @@ use Flarum\User\User;
 /**
  * "Mira wished you a happy birthday." The subject is the member who wished,
  * so the alert needs no resource of its own and links to their profile.
+ *
+ * The recipient is in the data: the syncer matches alerts by type, subject
+ * and data, and without it Mira wishing Carol would delete Bob's alert.
  */
 class WishBlueprint implements BlueprintInterface, AlertableInterface
 {
-    public function __construct(public readonly User $from, public readonly string $kind, public readonly int $year)
+    public function __construct(public readonly User $from, public readonly int $to, public readonly string $kind, public readonly int $year)
     {
     }
 
@@ -29,7 +32,7 @@ class WishBlueprint implements BlueprintInterface, AlertableInterface
 
     public function getData(): array
     {
-        return ['kind' => $this->kind, 'year' => $this->year];
+        return ['to' => $this->to, 'kind' => $this->kind, 'year' => $this->year];
     }
 
     public static function getType(): string

@@ -61,7 +61,7 @@ class Inject
             $moment = true;
         }
 
-        if ($actor->hasPermission('ernestdefoe-fanfare.viewPeople')) {
+        if ($actor->hasPermission('viewForum') && $actor->hasPermission('ernestdefoe-fanfare.viewPeople')) {
             $people = $this->people->around($today);
 
             if ($this->config->datlechin() && ! $actor->hasPermission('user.viewBirthday')) {
@@ -74,7 +74,7 @@ class Inject
 
                 if (! $actor->isGuest() && $actor->hasPermission('ernestdefoe-fanfare.wish')) {
                     $data['canWish'] = true;
-                    $data['wished'] = $this->wished($actor, $people, (int) $today->format('Y'));
+                    $data['wished'] = $this->wished($actor, $people, $today);
                 }
             }
         }
@@ -87,7 +87,7 @@ class Inject
             if ($mine['birthday'] || $mine['years']) {
                 $data['mine'] = $mine + ($preview !== null
                     ? ['md' => $today->format('m-d'), 'joined' => $today->format('m-d'), 'wishedBy' => [], 'wishedCount' => 0]
-                    : ['md' => $this->people->birthdayOf($actor), 'joined' => $actor->joined_at?->format('m-d')] + $this->wishedBy($actor, $mine, (int) $today->format('Y')));
+                    : ['md' => $this->people->birthdayOf($actor), 'joined' => $actor->joined_at?->format('m-d')] + $this->wishedBy($actor, $mine, $today));
                 $moment = true;
             }
         }
@@ -188,16 +188,26 @@ class Inject
      * @param array<string, mixed> $people
      * @return list<string> "kind:id"
      */
-    protected function wished(User $actor, array $people, int $year): array
+    protected function wished(User $actor, array $people, DateTimeImmutable $today): array
     {
+        // Each person's wish is filed under the year of the day they celebrate.
+        $years = [];
+        foreach (['birthday' => $people['birthdays'], 'anniversary' => $people['anniversaries']] as $kind => $list) {
+            foreach ($list as $p) {
+                $years[$kind.':'.$p['id']] = People::celebratedYear($p['md'], $today);
+            }
+        }
+
         $ids = array_unique([...array_column($people['birthdays'], 'id'), ...array_column($people['anniversaries'], 'id')]);
 
         return Wish::query()
             ->where('from_user_id', $actor->id)
-            ->where('year', $year)
+            ->whereIn('year', array_unique(array_filter($years)))
             ->whereIn('to_user_id', $ids)
-            ->get(['to_user_id', 'kind'])
+            ->get(['to_user_id', 'kind', 'year'])
+            ->filter(fn (Wish $w) => ($years[$w->kind.':'.$w->to_user_id] ?? null) === $w->year)
             ->map(fn (Wish $w) => $w->kind.':'.$w->to_user_id)
+            ->values()
             ->all();
     }
 
@@ -207,10 +217,14 @@ class Inject
      * @param array{birthday: bool, years: ?int} $mine
      * @return array{wishedBy: list<string>, wishedCount: int}
      */
-    protected function wishedBy(User $actor, array $mine, int $year): array
+    protected function wishedBy(User $actor, array $mine, DateTimeImmutable $today): array
     {
-        $kinds = array_keys(array_filter(['birthday' => $mine['birthday'], 'anniversary' => $mine['years'] !== null]));
-        $query = Wish::query()->where('to_user_id', $actor->id)->where('year', $year)->whereIn('kind', $kinds);
+        $md = ['birthday' => $mine['birthday'] ? $this->people->birthdayOf($actor) : null, 'anniversary' => $mine['years'] !== null ? $actor->joined_at?->format('m-d') : null];
+        $query = Wish::query()->where('to_user_id', $actor->id)->where(function ($q) use ($md, $today) {
+            foreach (array_filter($md) as $kind => $day) {
+                $q->orWhere(fn ($k) => $k->where('kind', $kind)->where('year', People::celebratedYear($day, $today)));
+            }
+        });
 
         $names = (clone $query)->with('fromUser')->latest('created_at')->limit(3)->get()
             ->map(fn (Wish $w) => $w->fromUser?->display_name)->filter()->values()->all();

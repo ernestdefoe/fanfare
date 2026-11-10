@@ -32,14 +32,13 @@ class GreetCommand extends Command
             return self::SUCCESS;
         }
 
-        $settings->set($key, $today->format('Y-m-d'));
         $year = (int) $today->format('Y');
         $md = $today->format('m-d');
         $mds = $md === '02-28' && $today->format('L') === '0' ? ['02-28', '02-29'] : [$md];
         $sent = 0;
 
         if (! $config->datlechin()) {
-            User::query()->whereIn('fanfare_birthday', $mds)->where('is_email_confirmed', true)
+            $people->listable(User::query())->whereIn('fanfare_birthday', $mds)
                 ->chunkById(200, function ($users) use ($notifications, $year, &$sent) {
                     foreach ($users as $user) {
                         $notifications->sync(new DayBlueprint($user, 'birthday', $year), [$user]);
@@ -48,7 +47,7 @@ class GreetCommand extends Command
                 });
         }
 
-        $query = User::query()->where('is_email_confirmed', true)->where('joined_at', '<', $today->modify('-300 days')->format('Y-m-d'));
+        $query = $people->listable(User::query())->where('joined_at', '<', $today->modify('-300 days')->format('Y-m-d'));
         $query->whereIn(People::monthDay($query->getQuery(), 'users.joined_at'), $mds)
             ->chunkById(200, function ($users) use ($notifications, $people, $today, $year, &$sent) {
                 foreach ($users as $user) {
@@ -59,6 +58,9 @@ class GreetCommand extends Command
                 }
             });
 
+        // Marked done only once everyone was greeted: a run that dies part-way is
+        // finished by the next one, and the syncer doesn't send an alert twice.
+        $settings->set($key, $today->format('Y-m-d'));
         $this->info("Greeted $sent.");
 
         return self::SUCCESS;

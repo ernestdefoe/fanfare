@@ -32,7 +32,7 @@ ernestdefoe-fanfare:
       year: "Year (optional)"
       clear: Clear
       visibility: Who sees it
-      visibility_0: Nobody (I still get my own greeting)
+      visibility_0: Nobody, and hide my join anniversary too (I still get my own greetings)
       visibility_1: Members see the day
       visibility_2: Members see the day and my age
       datlechin: Set your birthday under Account.
