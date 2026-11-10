@@ -26,6 +26,7 @@ export default function settingsItems(items) {
 
   const saveDate = () => {
     if (!bd.month || !bd.day) return;
+    if (`${pad(bd.month)}-${pad(bd.day)}` === user.attribute('fanfareBirthday') && String(bd.year || '') === String(user.attribute('fanfareBirthYear') || '')) return;
     const year = Number(bd.year);
     if (bd.year && (!Number.isInteger(year) || year < 1900 || year > new Date().getFullYear())) return;
     save({ fanfareBirthday: `${pad(bd.month)}-${pad(bd.day)}`, fanfareBirthYear: bd.year ? Number(bd.year) : null });
@@ -69,9 +70,11 @@ export default function settingsItems(items) {
           placeholder={t('settings.year')}
           aria-label={t('settings.year')}
           value={bd.year || ''}
-          disabled={bd.saving}
           oninput={(e) => {
             bd.year = e.target.value;
+            // Android's keyboard can close without the field losing focus, so no change
+            // event comes: a full four-digit year is saved as it is typed.
+            if (/^\d{4}$/.test(bd.year)) saveDate();
           }}
           onchange={saveDate}
         />
