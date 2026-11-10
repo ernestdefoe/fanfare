@@ -102,10 +102,23 @@ app.initializers.add('ernestdefoe-fanfare', () => {
     const first = mine[0];
     const key = first.id + ':' + day.ymd;
     if (data.settings?.onceADay && seen() === key && !data.settings?.preview) return;
-    markSeen(key);
-    openStage(first);
+    // A cookie or consent banner is answered first: the moment waits for it to go.
+    const go = () => {
+      if (consentShowing()) return setTimeout(go, 1000);
+      markSeen(key);
+      openStage(first);
+    };
+    go();
   }, 600);
 });
+
+/** A cookie or consent banner fixed on screen (Flarum cookie extensions and the common scripts). */
+function consentShowing() {
+  return [...document.querySelectorAll('[class*="ookie"], [class*="onsent"], [id*="ookie"], [id*="onsent"]')].some((el) => {
+    const style = getComputedStyle(el);
+    return (style.position === 'fixed' || style.position === 'sticky') && el.offsetHeight > 0 && style.visibility !== 'hidden';
+  });
+}
 
 function openStage(moment) {
   const go = () => window.FanfareStage.open(moment, host());
