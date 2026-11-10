@@ -27,8 +27,8 @@ export default `
   -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); opacity: 0; transition: opacity .4s .3s; }
 .FanfareStage .Skip:hover { background: rgba(255,255,255,.28); }
 .FanfareStage.up .Skip { opacity: 1; }
-.FanfareStage .Piece { position: absolute; left: 50%; bottom: 0; aspect-ratio: 600 / 700; container-type: inline-size;
-  width: min(600px, 94vw, calc((100dvh - 0px - 30px) * .857));
+.FanfareStage .Piece { position: absolute; left: 50%; bottom: var(--ff-bottom, 0px); aspect-ratio: 600 / 700; container-type: inline-size;
+  width: min(600px, 94vw, calc((100dvh - 30px - var(--ff-bottom, 0px)) * .857));
   transform: translate(-50%, 108%); transition: transform 1.2s cubic-bezier(.28,1.32,.5,1); }
 .FanfareStage.up .Piece { transform: translate(-50%, 0); }
 .FanfareStage.leaving .Piece { transition: transform .7s cubic-bezier(.55,0,.8,.2); transform: translate(-50%, 110%); }

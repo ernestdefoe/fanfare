@@ -347,6 +347,10 @@ function open(moment, h) {
   root.style.setProperty('--occ-btn-ink', s.btnInk || '#fff');
   root.style.setProperty('--occ-ink', s.ink);
   root.style.setProperty('--spot', s.spot);
+  // Rise from just above a bottom tab bar (FoF Mobile Tab and the like), which sits over the stage.
+  const bar = document.querySelector('.MobileTab-bar, .MobileTab');
+  const rect = bar && getComputedStyle(bar).position === 'fixed' ? bar.getBoundingClientRect() : null;
+  root.style.setProperty('--ff-bottom', rect && rect.height && rect.bottom >= innerHeight - 2 ? Math.round(rect.height) + 'px' : '0px');
   $('.Skip span').textContent = host.t('close');
   $('.TopDeco').innerHTML = s.deco ? s.deco() : '';
 
