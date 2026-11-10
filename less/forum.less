@@ -71,23 +71,28 @@ html:not(#x-hi) .FanfareWidget .FanfareWidget-person:hover {
 }
 .FanfareWidget-wished { flex: none; font-size: 12px; font-weight: 700; color: var(--muted-color); }
 
-// On phones the sidebar folds away: a strip of chips above the list instead.
-.FanfareWidget--strip { display: none; }
-@media (max-width: 767px) {
-  .IndexPage .FanfareWidget:not(.FanfareWidget--strip) { display: none; }
-  .FanfareWidget--strip {
-    display: flex;
-    gap: 8px;
-    margin: 0 0 12px;
-    padding: 8px;
-    overflow-x: auto;
-    scrollbar-width: none;
+// On phones the sidebar folds away, and some themes (Bespoke) draw no sidebar:
+// there, a strip of chips above the discussion list instead.
+.FanfareWidget--strip {
+  display: none;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
 
-    .FanfareWidget-group { display: flex; gap: 8px; align-items: center; margin: 0; flex: none; }
-    .FanfareWidget-heading { margin: 0 4px; flex: none; white-space: nowrap; }
-    .FanfareWidget-row { flex: none; padding: 3px 4px 3px 3px; border-radius: 999px; background: var(--body-bg); }
-    .FanfareWidget-name { max-width: 9em; }
-  }
+  .FanfareWidget-group { display: flex; gap: 8px; align-items: center; margin: 0; flex: none; }
+  .FanfareWidget-heading { margin: 0 4px; flex: none; white-space: nowrap; }
+  .FanfareWidget-row { flex: none; padding: 3px 4px 3px 3px; border-radius: 999px; background: var(--body-bg); }
+  .FanfareWidget-name { max-width: 9em; }
+}
+.FanfareWidget--strip.is-wide { display: flex; }
+@media (max-width: 767px) {
+  .IndexPage .FanfareWidget--sidebar { display: none; }
+  .FanfareWidget--strip { display: flex; }
 }
 
 .Badge--fanfareBirthday { --badge-bg: #e2557f; background: #e2557f; color: #fff; }
@@ -95,5 +100,6 @@ html:not(#x-hi) .FanfareWidget .FanfareWidget-person:hover {
 
 .FanfareSettings-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
 .FanfareSettings-row .Select { min-width: 0; }
+.FanfareSettings-row .Select:first-child { min-width: 10em; }
 .FanfareSettings-year { width: 9em; }
 .FanfareSettings-label { display: block; margin-top: 4px; }

@@ -6,6 +6,7 @@ import IndexSidebar from 'flarum/forum/components/IndexSidebar';
 import IndexPage from 'flarum/forum/components/IndexPage';
 import HeaderSecondary from 'flarum/forum/components/HeaderSecondary';
 import Widget from './components/Widget';
+import registerHosts from './hosts';
 import settingsItems from './settings';
 import { localDay, moments, peopleToday, emoji } from './today';
 import { t, text, local } from './util';
@@ -52,8 +53,9 @@ app.initializers.add('ernestdefoe-fanfare', () => {
   });
 
   if (birthdays.size || anniversaries.size) {
-    extend(IndexSidebar.prototype, 'items', (items) => items.add('fanfare', <Widget />, -20));
-    extend(IndexPage.prototype, 'contentItems', (items) => items.add('fanfare', <Widget strip />, 110));
+    registerHosts(app, (host) => <Widget host={host} />);
+    extend(IndexSidebar.prototype, 'items', (items) => items.add('fanfare', <Widget host="sidebar" />, -20));
+    extend(IndexPage.prototype, 'contentItems', (items) => items.add('fanfare', <Widget host="strip" />, 110));
   }
 
   if (!mine.length) return;

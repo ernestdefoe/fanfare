@@ -377,6 +377,7 @@ function open(moment, h) {
 function close() {
   if (!root || !current || root.classList.contains('leaving')) return;
   stopTune();
+  fx.settle();
   const was = current;
   current = null;
   root.classList.remove('up');

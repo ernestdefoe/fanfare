@@ -1,11 +1,15 @@
 import app from 'flarum/admin/app';
 import Occasions from './Occasions';
+import { registerEditorWidgets } from '../common/fofWidgets';
 
 const NS = 'ernestdefoe-fanfare';
 const t = (key, params) => app.translator.trans(`${NS}.admin.settings.${key}`, params);
 
 app.initializers.add(NS, () => {
   const data = app.data.fanfareAdmin || {};
+
+  // FoF's layout editor lists only widgets the admin registers too.
+  registerEditorWidgets(app, NS, [{ key: 'fanfareToday', icon: 'fas fa-cake-candles', title: () => app.translator.trans(`${NS}.admin.widget_title`) }]);
 
   app.registry
     .for(NS)

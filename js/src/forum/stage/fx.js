@@ -163,6 +163,8 @@ export default function createFX(opts) {
 
   return {
     stop() { parts = []; ambient = null; },
+    /** Nothing new falls; what is already falling finishes. */
+    settle() { ambient = null; },
     confetti(n = 160, p) {
       if (reduced()) return;
       n = Math.round(n * scale);

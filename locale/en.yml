@@ -101,6 +101,7 @@ ernestdefoe-fanfare:
       thanksgiving_sub: We're thankful for every one of you.
 
   admin:
+    widget_title: Today's birthdays and anniversaries
     permissions:
       view_people: See today's birthdays and anniversaries
       wish: Send birthday and anniversary wishes

@@ -4,18 +4,54 @@ import Link from 'flarum/common/components/Link';
 import stringToColor from 'flarum/common/utils/stringToColor';
 import { peopleToday } from '../today';
 import { t } from '../util';
+import { claim, release, hosted } from '../hosts';
 
 /**
- * Today's birthdays and join anniversaries, with a one-tap wish. In the index
- * sidebar on wide screens; a strip of chips above the discussion list on phones.
+ * Today's birthdays and join anniversaries, with a one-tap wish.
+ *
+ * host: 'sidebar' (the index sidebar), 'strip' (chips above the discussion
+ * list: on phones, and on wide screens whenever the sidebar copy isn't
+ * visible, as under Bespoke), or a widget host the admin placed it in
+ * ('bespoke', 'fof'). A placed copy makes the two fallbacks stand down.
  */
 export default class Widget extends Component {
+  oncreate(vnode) {
+    super.oncreate(vnode);
+    if (!this.fallback()) claim(this.attrs.host);
+    this.measure();
+  }
+
+  onupdate(vnode) {
+    super.onupdate(vnode);
+    this.measure();
+  }
+
+  onremove(vnode) {
+    super.onremove(vnode);
+    if (!this.fallback()) release(this.attrs.host);
+  }
+
+  fallback() {
+    return this.attrs.host === 'sidebar' || this.attrs.host === 'strip';
+  }
+
+  /** The strip shows on wide screens too when the sidebar copy is not on screen. */
+  measure() {
+    if (this.attrs.host !== 'strip') return;
+    const side = document.querySelector('.FanfareWidget--sidebar');
+    const wanted = !side || !side.offsetParent;
+    if (wanted !== !!this.wide) {
+      this.wide = wanted;
+      m.redraw();
+    }
+  }
+
   view() {
     const data = app.data.fanfare;
     const today = peopleToday(data);
-    const strip = this.attrs.strip;
+    const strip = this.attrs.host === 'strip';
 
-    if (!today.birthdays.length && !today.anniversaries.length) return null;
+    if ((!today.birthdays.length && !today.anniversaries.length) || (this.fallback() && hosted())) return null;
 
     const rows = (list, kind) =>
       list.map((p) => {
@@ -40,7 +76,7 @@ export default class Widget extends Component {
     const more = (n) => (n > 0 && !strip ? <div className="FanfareWidget-more">{t('widget.more', { count: n })}</div> : null);
 
     return (
-      <section className={'FanfareWidget' + (strip ? ' FanfareWidget--strip' : '')} aria-label={t('widget.heading')}>
+      <section className={'FanfareWidget FanfareWidget--' + this.attrs.host + (strip && this.wide ? ' is-wide' : '')} aria-label={t('widget.heading')}>
         {today.birthdays.length ? (
           <div className="FanfareWidget-group">
             <h4 className="FanfareWidget-heading">🎂 {strip ? t('widget.today') : t('widget.heading')}</h4>
