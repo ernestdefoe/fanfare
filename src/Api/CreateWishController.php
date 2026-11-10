@@ -11,7 +11,6 @@ use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
 use Flarum\Notification\NotificationSyncer;
 use Flarum\User\User;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -52,16 +51,17 @@ class CreateWishController implements RequestHandlerInterface
             throw new ValidationException(['wish' => $this->translator->trans('ernestdefoe-fanfare.api.not_their_day')]);
         }
 
-        try {
-            $wish = new Wish();
-            $wish->from_user_id = $actor->id;
-            $wish->to_user_id = $to->id;
-            $wish->kind = $kind;
-            $wish->year = $year;
-            $wish->created_at = Carbon::now();
-            $wish->save();
-        } catch (QueryException) {
-            // Already wished: the unique key said so. Same answer as the first time.
+        // Already wished: the unique key ignores the row (no error, which would abort
+        // a surrounding PostgreSQL transaction). Same answer as the first time.
+        $added = Wish::query()->insertOrIgnore([
+            'from_user_id' => $actor->id,
+            'to_user_id' => $to->id,
+            'kind' => $kind,
+            'year' => $year,
+            'created_at' => Carbon::now(),
+        ]);
+
+        if (! $added) {
             return new JsonResponse(['wished' => true]);
         }
 
