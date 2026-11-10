@@ -18,12 +18,12 @@ app.initializers.add(NS, () => {
     .registerSetting(function () {
       return <Occasions setting={this.setting(`${NS}.occasions`)} data={data} />;
     })
-    .registerSetting({ type: 'html', html: <h3 className="FanfareAdmin-heading">{t('people_heading')}</h3> })
-    .registerSetting({ type: 'html', html: <p className="helpText">{data.datlechin ? t('datlechin_help') : t('people_help')}</p> })
+    .registerSetting(() => <h3 className="FanfareAdmin-heading">{t('people_heading')}</h3>)
+    .registerSetting(() => <p className="helpText">{data.datlechin ? t('datlechin_help') : t('people_help')}</p>)
     .registerSetting({ setting: `${NS}.milestones`, type: 'boolean', label: t('milestones') })
     .registerSetting({ setting: `${NS}.forum_birthday`, type: 'date', label: t('forum_birthday'), help: t('forum_birthday_help') })
-    .registerSetting({ type: 'html', html: <h3 className="FanfareAdmin-heading">{t('effects_heading')}</h3> })
-    .registerSetting({ type: 'html', html: <p className="helpText">{t('effects_help')}</p> })
+    .registerSetting(() => <h3 className="FanfareAdmin-heading">{t('effects_heading')}</h3>)
+    .registerSetting(() => <p className="helpText">{t('effects_help')}</p>)
     .registerSetting({
       setting: `${NS}.intensity`,
       type: 'select',
