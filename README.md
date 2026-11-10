@@ -84,6 +84,10 @@ php flarum migrate
 php flarum cache:clear
 ```
 
+## Credits
+
+The display fonts Pacifico (the Pacifico Project Authors) and Creepster (Font Diner, Inc) are licensed under the SIL Open Font License 1.1; the licences are in `assets/fonts/`.
+
 ## Links
 
 - [Packagist](https://packagist.org/packages/ernestdefoe/fanfare)
