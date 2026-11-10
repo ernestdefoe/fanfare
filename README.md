@@ -4,6 +4,8 @@
 
 A [Flarum 2](https://flarum.org) extension that makes your forum mark the moment. On a member's birthday a big layered cake rises onto their screen with the candles lighting one by one and "Happy Birthday" piped on it. On Christmas a wrapped present arrives with a gift tag from your forum and twinkling lights across the top. Each occasion has its own centrepiece, a tune to tap and play, and effects behind it.
 
+![A member's birthday](screenshots/birthday.jpg)
+
 ## What it celebrates
 
 | Occasion | The moment |
@@ -24,13 +26,15 @@ The US holidays are on when you install it; the world holidays are a switch away
 
 Everyone also sees **Today's birthdays** and anniversaries in the sidebar (a strip of chips on phones) with a one-tap **Wish**, which sends a notification. Members get a badge for their day on their posts and profile.
 
+![Christmas](screenshots/christmas.jpg)
+
 ## Gentle by design
 
 - **The moment shows once a day per member**, then waits behind a button in the header.
 - **Nothing ever plays by itself.** Tunes play when the member taps ♪ Play, and turning sound off is remembered on every device.
 - **Members who prefer reduced motion** get the centrepiece standing still, already lit, with no confetti.
 - **Skippable**: Close or Esc, any time.
-- **Light on normal days**: forum.js is about 4 KB gzipped. The centrepieces, effects and tunes (about 22 KB gzipped) are one script added only on a day with a moment. The two display fonts ship with the extension, so no font service is called.
+- **Light on normal days**: forum.js is about 5 KB gzipped. The centrepieces, effects and tunes (about 22 KB gzipped) are one script added only on a day with a moment. The two display fonts ship with the extension, so no font service is called.
 
 ## Birthdays and privacy
 
@@ -43,6 +47,8 @@ If [Birthdays by datlechin](https://github.com/datlechin/flarum-birthdays) is in
 If [Festoon](https://github.com/ernestdefoe/festoon) is installed, Fanfare takes holiday dates from it, so the two always agree. Festoon's falling snow or leaves keep falling and Fanfare doesn't add its own. A member who turned Festoon's decorations off doesn't get Fanfare's effects either.
 
 ## Settings
+
+![Settings](screenshots/admin.jpg)
 
 Admin → Fanfare:
 
