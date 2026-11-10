@@ -26,6 +26,8 @@ export default function settingsItems(items) {
 
   const saveDate = () => {
     if (!bd.month || !bd.day) return;
+    const year = Number(bd.year);
+    if (bd.year && (!Number.isInteger(year) || year < 1900 || year > new Date().getFullYear())) return;
     save({ fanfareBirthday: `${pad(bd.month)}-${pad(bd.day)}`, fanfareBirthYear: bd.year ? Number(bd.year) : null });
   };
 
