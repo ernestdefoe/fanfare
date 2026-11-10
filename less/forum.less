@@ -1,0 +1,99 @@
+// Fanfare on every page: the header button, the widget, the badges and the
+// settings row. Everything that moves lives in the stage script, which only
+// comes on a day with a moment.
+
+.FanfarePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: var(--control-color);
+  background: var(--control-bg);
+  font-weight: 600;
+  animation: fanfare-pill .4s ease-out;
+}
+.FanfarePill-emoji { font-size: 16px; line-height: 1; }
+.FanfarePill-label { font-variant-numeric: tabular-nums; }
+@keyframes fanfare-pill { from { transform: scale(.6); opacity: 0; } }
+
+.FanfareWidget {
+  position: relative;
+  overflow: hidden;
+  margin-top: 20px;
+  padding: 14px 12px 8px;
+  border-radius: 12px;
+  background: var(--control-bg);
+  color: var(--text-color);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4px;
+    background: linear-gradient(90deg, #ff6b9a, #ffb347, #ffe066, #58d68d, #5dade2, #a569bd);
+  }
+}
+.FanfareWidget-group + .FanfareWidget-group { margin-top: 10px; }
+.FanfareWidget-heading {
+  margin: 2px 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted-color);
+}
+.FanfareWidget-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; min-width: 0; }
+// Beats theme link colours (Bespoke light colours links at 0,3,1).
+html:not(#x-hi) .FanfareWidget .FanfareWidget-person,
+html:not(#x-hi) .FanfareWidget .FanfareWidget-person:hover {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+  color: var(--text-color);
+  text-decoration: none;
+}
+.FanfareWidget-avatar { --size: 30px; flex: none; }
+.FanfareWidget-who { min-width: 0; line-height: 1.25; }
+.FanfareWidget-name { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.FanfareWidget-sub { display: block; font-size: 12px; color: var(--muted-color); }
+.FanfareWidget-more { font-size: 12px; color: var(--muted-color); padding: 4px 0 2px; }
+.FanfareWidget .FanfareWidget-wish {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary-color);
+  background: var(--body-bg);
+}
+.FanfareWidget-wished { flex: none; font-size: 12px; font-weight: 700; color: var(--muted-color); }
+
+// On phones the sidebar folds away: a strip of chips above the list instead.
+.FanfareWidget--strip { display: none; }
+@media (max-width: 767px) {
+  .IndexPage .FanfareWidget:not(.FanfareWidget--strip) { display: none; }
+  .FanfareWidget--strip {
+    display: flex;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    .FanfareWidget-group { display: flex; gap: 8px; align-items: center; margin: 0; flex: none; }
+    .FanfareWidget-heading { margin: 0 4px; flex: none; white-space: nowrap; }
+    .FanfareWidget-row { flex: none; padding: 3px 4px 3px 3px; border-radius: 999px; background: var(--body-bg); }
+    .FanfareWidget-name { max-width: 9em; }
+  }
+}
+
+.Badge--fanfareBirthday { --badge-bg: #e2557f; background: #e2557f; color: #fff; }
+.Badge--fanfareAnniversary { --badge-bg: #3f5f8f; background: #3f5f8f; color: #fff; }
+
+.FanfareSettings-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.FanfareSettings-row .Select { min-width: 0; }
+.FanfareSettings-year { width: 9em; }
+.FanfareSettings-label { display: block; margin-top: 4px; }

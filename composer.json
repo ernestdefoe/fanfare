@@ -1,0 +1,89 @@
+{
+    "name": "ernestdefoe/fanfare",
+    "description": "Fanfare: the forum marks the moment. Member birthdays and join anniversaries, the forum's own birthday, Christmas, New Year's Eve, Lunar New Year, Diwali, Eid, Hanukkah, Halloween and Thanksgiving, each with its own big animated centrepiece, a tune to tap and play, and one-click wishes.",
+    "keywords": [
+        "flarum",
+        "flarum-extension",
+        "birthday",
+        "birthdays",
+        "anniversary",
+        "holidays",
+        "celebrations",
+        "confetti"
+    ],
+    "type": "flarum-extension",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ernest Defoe",
+            "email": "ernestdefoe@gmail.com"
+        }
+    ],
+    "homepage": "https://github.com/ernestdefoe/fanfare",
+    "support": {
+        "issues": "https://github.com/ernestdefoe/fanfare/issues",
+        "source": "https://github.com/ernestdefoe/fanfare"
+    },
+    "funding": [
+        {
+            "type": "other",
+            "url": "https://buymeacoffee.com/ernestdefoe"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "ext-intl": "*",
+        "flarum/core": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "ErnestDefoe\\Fanfare\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ErnestDefoe\\Fanfare\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "flarum-extension": {
+            "title": "Fanfare",
+            "category": "feature",
+            "icon": {
+                "name": "fas fa-cake-candles",
+                "backgroundColor": "#e2557f",
+                "color": "#fff"
+            },
+            "optional-dependencies": [
+                "flarum/gdpr",
+                "ernestdefoe/festoon",
+                "datlechin/flarum-birthdays"
+            ]
+        }
+    },
+    "require-dev": {
+        "ernestdefoe/festoon": "^1.3",
+        "flarum/gdpr": "^2.0",
+        "flarum/phpstan": "^2.0",
+        "flarum/testing": "^2.0"
+    },
+    "scripts": {
+        "test": [
+            "@test:integration"
+        ],
+        "test:integration": "phpunit -c tests/phpunit.integration.xml",
+        "test:setup": "@php tests/integration/setup.php",
+        "analyse:phpstan": "phpstan analyse"
+    },
+    "scripts-descriptions": {
+        "test": "Runs all tests.",
+        "test:integration": "Runs all integration tests.",
+        "test:setup": "Sets up a database for use with integration tests. Execute this only once.",
+        "analyse:phpstan": "Run static analysis"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "beta",
+    "prefer-stable": true
+}
