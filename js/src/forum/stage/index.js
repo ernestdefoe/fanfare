@@ -504,10 +504,7 @@ function open(moment, h) {
   root.style.setProperty('--occ-btn-ink', s.btnInk || '#fff');
   root.style.setProperty('--occ-ink', s.ink);
   root.style.setProperty('--spot', s.spot);
-  // Rise from just above a bottom tab bar (FoF Mobile Tab and the like), which sits over the stage.
-  const bar = document.querySelector('.MobileTab-bar, .MobileTab');
-  const rect = bar && getComputedStyle(bar).position === 'fixed' ? bar.getBoundingClientRect() : null;
-  root.style.setProperty('--ff-bottom', rect && rect.height && rect.bottom >= innerHeight - 2 ? Math.round(rect.height) + 'px' : '0px');
+  watchBottom();
   $('.Skip span').textContent = host.t('close');
   $('.TopDeco').innerHTML = s.deco ? s.deco() : '';
 
@@ -531,12 +528,46 @@ function open(moment, h) {
   setTimeout(focusTitle, quiet ? 0 : 1300);
 }
 
+/**
+ * Rise from just above whatever sits over the bottom of the screen: a tab bar
+ * (FoF Mobile Tab and the like) and Flarum's alerts (a push prompt, "Saved"),
+ * which stay on top. Followed while the stage is open, as alerts come and go.
+ */
+let bottomWatch = null;
+
+function bottom() {
+  let lift = 0;
+  const bar = document.querySelector('.MobileTab-bar, .MobileTab');
+  const rect = bar && getComputedStyle(bar).position === 'fixed' ? bar.getBoundingClientRect() : null;
+  if (rect && rect.height && rect.bottom >= innerHeight - 2) lift = rect.height;
+  for (const alert of document.querySelectorAll('.AlertManager .Alert')) {
+    const r = alert.getBoundingClientRect();
+    if (r.height) lift = Math.max(lift, innerHeight - r.top + 10);
+  }
+  root.style.setProperty('--ff-bottom', Math.round(lift) + 'px');
+}
+
+function watchBottom() {
+  bottom();
+  if (bottomWatch) return;
+  const alerts = document.getElementById('alerts');
+  const mo = new MutationObserver(bottom);
+  if (alerts) mo.observe(alerts, { childList: true, subtree: true });
+  addEventListener('resize', bottom);
+  bottomWatch = () => {
+    mo.disconnect();
+    removeEventListener('resize', bottom);
+    bottomWatch = null;
+  };
+}
+
 function close() {
   if (!root || !current || root.classList.contains('leaving')) return;
   stopTune();
   fx.settle();
   const was = current;
   current = null;
+  bottomWatch?.();
   root.classList.remove('up');
   root.classList.add('leaving');
   setTimeout(
