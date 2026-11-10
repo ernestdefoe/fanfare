@@ -42,6 +42,8 @@ function formatDate(iso) {
 
 const playBtn = (key = 'play') =>
   `<button class="Play" id="ffPlay" type="button"><span class="note" aria-hidden="true">♪</span><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="lbl">${t(key)}</span><span class="prog"></span></button>`;
+/** Titles past about 24 characters step down a size so they stay on the plaque. */
+const long = (text) => (String(text).length > 24 ? ' long' : '');
 const muteBtn = () => `<button class="PRound" id="ffMute" type="button"></button>`;
 
 /* ------------------------------------------------------------------ */
@@ -66,7 +68,7 @@ const SCENES = {
     tune: 'fanfare', btn: '#3f5f8f', ink: '#2d4a7a', spot: 'rgba(110,160,255,.55)',
     svg: () => A.medalSVG(m.years), title: [24.6, 27, 46, 24], foot: [71.6, 14.5, 71, 27],
     titleHtml: `<span class="yrs">${m.years}</span><span class="yrsl">${t(m.years === 1 ? 'anniversary_year' : 'anniversary_years', { forum: host.forum })}</span>`,
-    footHtml: `<h2 class="Script t-anniv" id="ffTitle" tabindex="-1">${t('anniversary_title', { name: host.name })}</h2>
+    footHtml: `<h2 class="Script t-anniv${long(host.t('anniversary_title', { name: host.name }))}" id="ffTitle" tabindex="-1">${t('anniversary_title', { name: host.name })}</h2>
       ${host.joined ? `<p class="Sub sub-anniv">${t('anniversary_since', { date: formatDate(host.joined), posts: host.posts || 0 })}</p>` : ''}
       <div class="Acts">${playBtn('play_fanfare')}${muteBtn()}</div>`,
     play() {
@@ -80,7 +82,7 @@ const SCENES = {
     tune: 'birthday', btn: '#e2557f', ink: '#c2385f', spot: 'rgba(120,200,255,.5)', deco: () => A.topDeco('bunting'),
     svg: () => A.forumSVG(m.age), title: [0, 0, 0, 0], foot: [71.6, 14.5, 71, 27],
     titleHtml: '',
-    footHtml: `<h2 class="Script t-anniv" id="ffTitle" tabindex="-1">${t('forum_title', { ordinal: ordinal(m.age), forum: host.forum })}</h2>
+    footHtml: `<h2 class="Script t-anniv${long(host.t('forum_title', { ordinal: ordinal(m.age), forum: host.forum }))}" id="ffTitle" tabindex="-1">${t('forum_title', { ordinal: ordinal(m.age), forum: host.forum })}</h2>
       <p class="Sub sub-anniv">${t('forum_since', { date: formatDate(m.since), members: m.members, posts: m.posts })}</p>
       <div class="Acts">${playBtn()}${muteBtn()}</div>`,
     play() { fx.confetti(220); later(() => fx.confetti(120), 900); },
@@ -180,7 +182,9 @@ function clock(m) {
 
     if (!after) {
       const hh = Math.floor(left / 3600), mm = Math.floor(left / 60) % 60, ss = left % 60;
-      $('#ffDigits').textContent = (hh ? hh + ':' + String(mm).padStart(2, '0') : String(mm)) + ':' + String(ss).padStart(2, '0');
+      const digits = $('#ffDigits');
+      digits.textContent = (hh ? hh + ':' + String(mm).padStart(2, '0') : String(mm)) + ':' + String(ss).padStart(2, '0');
+      digits.classList.toggle('long', digits.textContent.length > 5);
       host.countdown?.(left);
     } else if (!root.classList.contains('midnight')) {
       root.classList.add('midnight');

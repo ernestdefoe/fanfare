@@ -64,6 +64,7 @@ export default `
 @keyframes ff-pop { from { transform: scale(.6); opacity: 0; } }
 .FanfareStage .Dial .pre, .FanfareStage .Dial .tz { font-size: max(10.5px, 1.9cqw); letter-spacing: .16em; text-transform: uppercase; color: #aab3e0; font-weight: 700; }
 .FanfareStage .Dial .tz { letter-spacing: .04em; text-transform: none; font-weight: 500; margin-top: .6cqw; }
+.FanfareStage .Dial .digits.long { font-size: max(30px, 9.5cqw); }
 .FanfareStage .Dial .digits { font: 700 max(44px, 14cqw)/1.05 ui-monospace, SFMono-Regular, Menlo, monospace; color: #ffe08a; text-shadow: 0 0 2.4cqw rgba(255,200,80,.6); }
 .FanfareStage .t-nye { white-space: nowrap; line-height: 1.35; font-size: max(24px, 6.6cqw); background: linear-gradient(90deg, #ffe9a8, #ffb347 50%, #ffe9a8); -webkit-background-clip: text; background-clip: text; color: transparent; padding: 0 .1em; filter: drop-shadow(0 0 8px rgba(255,190,80,.45)); }
 .FanfareStage .Dial-after .yr { color: #e6e9ff; font-weight: 700; font-size: max(13px, 2.8cqw); letter-spacing: .08em; }
@@ -74,8 +75,9 @@ export default `
 
 /* membership anniversary */
 .FanfareStage .yrs { font: 800 max(64px, 21cqw)/1 Georgia, "Times New Roman", serif; background: linear-gradient(180deg, #fff2bd, #e9b949 60%, #b8862a); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 .6cqw 0 rgba(0,0,0,.35)); margin-top: 2cqw; }
-.FanfareStage .yrsl { color: #dfe7f6; font-weight: 700; font-size: max(11px, 2.2cqw); letter-spacing: .16em; text-transform: uppercase; margin-top: .6cqw; }
-.FanfareStage .t-anniv { color: #2d4a7a; font-size: max(21px, 5.2cqw); line-height: 1.35; }
+.FanfareStage .yrsl { max-width: 100%; overflow-wrap: anywhere; text-align: center; color: #dfe7f6; font-weight: 700; font-size: max(11px, 2.2cqw); letter-spacing: .16em; text-transform: uppercase; margin-top: .6cqw; }
+.FanfareStage .t-anniv { color: #2d4a7a; font-size: max(19px, 5.2cqw); line-height: 1.3; }
+.FanfareStage .t-anniv.long { font-size: max(17px, 4.2cqw); }
 .FanfareStage .sub-anniv { color: #5b6b82; font-weight: 600; margin-top: .2cqw; }
 /* lamps: candles, diyas */
 .FanfareStage .Lamp .Flame { transform-box: view-box; opacity: 0; transform: scale(.15); transition: opacity .25s, transform .4s cubic-bezier(.3,1.7,.5,1); }
