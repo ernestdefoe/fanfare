@@ -143,10 +143,7 @@ class Inject
             'md' => $today->format('m-d'),
             'age' => $age,
             'since' => $born,
-            'members' => User::query()->count(),
-            'discussions' => Discussion::query()->count(),
-            'posts' => Post::query()->where('type', 'comment')->count(),
-        ];
+        ] + $this->stats();
     }
 
     /** The forum's birthday, if it is around today: its age and a few numbers. Cached for the day. */
@@ -166,11 +163,23 @@ class Inject
                 'md' => substr($born, 5),
                 'age' => $age,
                 'since' => $born,
-                'members' => User::query()->count(),
-                'discussions' => Discussion::query()->count(),
-                'posts' => Post::query()->where('type', 'comment')->count(),
-            ];
+            ] + $this->stats();
         }) ?: null;
+    }
+
+    /**
+     * The forum's numbers for its birthday: confirmed members and what everyone can see
+     * (no private or hidden discussions and posts).
+     *
+     * @return array{members: int, discussions: int, posts: int}
+     */
+    protected function stats(): array
+    {
+        return [
+            'members' => User::query()->where('is_email_confirmed', true)->count(),
+            'discussions' => Discussion::query()->whereNull('hidden_at')->where('is_private', false)->count(),
+            'posts' => Post::query()->where('type', 'comment')->whereNull('hidden_at')->where('is_private', false)->count(),
+        ];
     }
 
     /**

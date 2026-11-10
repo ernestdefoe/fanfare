@@ -159,6 +159,26 @@ class FanfareTest extends TestCase
     }
 
     #[Test]
+    public function the_forums_birthday_counts_only_what_everyone_can_see()
+    {
+        $this->setting(Config::FORUM_BIRTHDAY, ((int) date('Y') - 6).'-'.$this->md);
+        $this->database()->table('discussions')->insert([
+            ['id' => 1, 'title' => 'Open', 'slug' => 'open', 'comment_count' => 1, 'participant_count' => 1, 'created_at' => '2026-01-01', 'user_id' => 2, 'is_private' => 0],
+            ['id' => 2, 'title' => 'Private', 'slug' => 'private', 'comment_count' => 1, 'participant_count' => 1, 'created_at' => '2026-01-01', 'user_id' => 2, 'is_private' => 1],
+        ]);
+        $this->database()->table('posts')->insert([
+            ['id' => 1, 'discussion_id' => 1, 'number' => 1, 'created_at' => '2026-01-01', 'user_id' => 2, 'type' => 'comment', 'content' => '<t>Hi</t>', 'is_private' => 0],
+            ['id' => 2, 'discussion_id' => 2, 'number' => 1, 'created_at' => '2026-01-01', 'user_id' => 2, 'type' => 'comment', 'content' => '<t>Secret</t>', 'is_private' => 1],
+        ]);
+
+        $forum = $this->payload(2)['forum'];
+
+        $this->assertSame(6, $forum['age']);
+        $this->assertSame(1, $forum['discussions']);
+        $this->assertSame(1, $forum['posts']);
+    }
+
+    #[Test]
     public function holiday_dates_are_right()
     {
         $occasions = $this->app()->getContainer()->make(Occasions::class);
