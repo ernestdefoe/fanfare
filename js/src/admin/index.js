@@ -9,11 +9,21 @@ app.initializers.add(NS, () => {
   const data = app.data.fanfareAdmin || {};
 
   // FoF's layout editor lists only widgets the admin registers too.
-  registerEditorWidgets(app, NS, [{ key: 'fanfareToday', icon: 'fas fa-cake-candles', title: () => app.translator.trans(`${NS}.admin.widget_title`) }]);
+  registerEditorWidgets(app, NS, [
+    { key: 'fanfareToday', icon: 'fas fa-cake-candles', title: () => app.translator.trans(`${NS}.admin.widget_title`) },
+  ]);
 
   app.registry
     .for(NS)
-    .registerPermission({ icon: 'fas fa-cake-candles', label: app.translator.trans(`${NS}.admin.permissions.view_people`), permission: `${NS}.viewPeople`, allowGuest: true }, 'view')
+    .registerPermission(
+      {
+        icon: 'fas fa-cake-candles',
+        label: app.translator.trans(`${NS}.admin.permissions.view_people`),
+        permission: `${NS}.viewPeople`,
+        allowGuest: true,
+      },
+      'view'
+    )
     .registerPermission({ icon: 'fas fa-gift', label: app.translator.trans(`${NS}.admin.permissions.wish`), permission: `${NS}.wish` }, 'reply')
     .registerSetting(function () {
       return <Occasions setting={this.setting(`${NS}.occasions`)} data={data} />;

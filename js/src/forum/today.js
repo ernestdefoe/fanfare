@@ -7,7 +7,11 @@
 const pad = (n) => String(n).padStart(2, '0');
 
 export function localDay(now = new Date()) {
-  return { ymd: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`, md: `${pad(now.getMonth() + 1)}-${pad(now.getDate())}`, year: now.getFullYear() };
+  return {
+    ymd: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+    md: `${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+    year: now.getFullYear(),
+  };
 }
 
 /** A month-day matches today; February 29 birthdays are kept on the 28th in other years. */
@@ -18,8 +22,19 @@ export function isToday(md, day) {
 }
 
 const EMOJI = {
-  birthday: '🎂', anniversary: '🏅', forum: '🎈', newyear: '🎆', christmas: '🎁', hanukkah: '🕎', lunar: '🏮',
-  diwali: '🪔', eidfitr: '🌙', eidadha: '🌙', halloween: '🎃', thanksgiving: '🍂', thanksgiving_ca: '🍂',
+  birthday: '🎂',
+  anniversary: '🏅',
+  forum: '🎈',
+  newyear: '🎆',
+  christmas: '🎁',
+  hanukkah: '🕎',
+  lunar: '🏮',
+  diwali: '🪔',
+  eidfitr: '🌙',
+  eidadha: '🌙',
+  halloween: '🎃',
+  thanksgiving: '🍂',
+  thanksgiving_ca: '🍂',
 };
 
 export const emoji = (id) => EMOJI[id] || '🎉';

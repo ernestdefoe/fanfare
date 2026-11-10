@@ -6,7 +6,18 @@ import Select from 'flarum/common/components/Select';
 const NS = 'ernestdefoe-fanfare';
 const t = (key, params) => app.translator.trans(`${NS}.admin.${key}`, params);
 
-const EMOJI = { newyear: '🎆', christmas: '🎁', thanksgiving: '🍂', thanksgiving_ca: '🍂', halloween: '🎃', lunar: '🏮', diwali: '🪔', eidfitr: '🌙', eidadha: '🌙', hanukkah: '🕎' };
+const EMOJI = {
+  newyear: '🎆',
+  christmas: '🎁',
+  thanksgiving: '🍂',
+  thanksgiving_ca: '🍂',
+  halloween: '🎃',
+  lunar: '🏮',
+  diwali: '🪔',
+  eidfitr: '🌙',
+  eidadha: '🌙',
+  hanukkah: '🕎',
+};
 
 /**
  * The occasions table: on or off, the next date (worked out on the server),

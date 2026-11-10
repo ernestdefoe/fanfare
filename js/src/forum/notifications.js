@@ -37,7 +37,9 @@ export class DayNotification extends Notification {
   content() {
     const data = this.attrs.notification.content() || {};
     const forum = app.forum.attribute('title');
-    return data.kind === 'anniversary' ? t('notifications.day_anniversary', { count: data.years, forum }) : t('notifications.day_birthday', { forum });
+    return data.kind === 'anniversary'
+      ? t('notifications.day_anniversary', { count: data.years, forum })
+      : t('notifications.day_birthday', { forum });
   }
 
   excerpt() {

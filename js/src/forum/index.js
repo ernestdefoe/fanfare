@@ -67,7 +67,13 @@ app.initializers.add('ernestdefoe-fanfare', () => {
     const label = state.countdown ? countdown(state.countdown) : null;
     items.add(
       'fanfare',
-      <button type="button" className="Button Button--flat FanfarePill" aria-label={text('pill.open')} title={text('pill.open')} onclick={() => openStage(moment)}>
+      <button
+        type="button"
+        className="Button Button--flat FanfarePill"
+        aria-label={text('pill.open')}
+        title={text('pill.open')}
+        onclick={() => openStage(moment)}
+      >
         <span className="FanfarePill-emoji" aria-hidden="true">
           {emoji(moment.id)}
         </span>
@@ -145,7 +151,8 @@ function host() {
     sound: () => (user ? user.preferences()?.fanfareSound !== false : local.get('fanfareSound') !== '0'),
     setSound: (on) => (user ? user.savePreferences({ fanfareSound: on }) : local.set('fanfareSound', on ? '1' : '0')),
     effects: () =>
-      (user ? user.preferences()?.fanfareEffects !== false : local.get('fanfareEffects') !== '0') && !document.documentElement.classList.contains('Festoon-off'),
+      (user ? user.preferences()?.fanfareEffects !== false : local.get('fanfareEffects') !== '0') &&
+      !document.documentElement.classList.contains('Festoon-off'),
     festoonFalling: () => !!document.querySelector('.Festoon-fall'),
     alert: (message) => app.alerts.show({ type: 'success' }, message),
     onOpen: () => {
@@ -160,7 +167,9 @@ function host() {
 }
 
 function countdown(left) {
-  const h = Math.floor(left / 3600), mm = Math.floor(left / 60) % 60, s = left % 60;
+  const h = Math.floor(left / 3600),
+    mm = Math.floor(left / 60) % 60,
+    s = left % 60;
   return (h ? h + ':' + String(mm).padStart(2, '0') : mm) + ':' + String(s).padStart(2, '0');
 }
 
@@ -177,4 +186,3 @@ function markSeen(key) {
     local.set('fanfareSeen', key);
   }
 }
-

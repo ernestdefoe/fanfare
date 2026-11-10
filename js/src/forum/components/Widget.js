@@ -76,7 +76,10 @@ export default class Widget extends Component {
     const more = (n) => (n > 0 && !strip ? <div className="FanfareWidget-more">{t('widget.more', { count: n })}</div> : null);
 
     return (
-      <section className={'FanfareWidget FanfareWidget--' + this.attrs.host + (strip && this.wide ? ' is-wide' : '')} aria-label={t('widget.heading')}>
+      <section
+        className={'FanfareWidget FanfareWidget--' + this.attrs.host + (strip && this.wide ? ' is-wide' : '')}
+        aria-label={t('widget.heading')}
+      >
         {today.birthdays.length ? (
           <div className="FanfareWidget-group">
             <h4 className="FanfareWidget-heading">🎂 {strip ? t('widget.today') : t('widget.heading')}</h4>
