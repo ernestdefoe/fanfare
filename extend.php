@@ -55,10 +55,11 @@ return [
         ->type(WishBlueprint::class, ['alert'])
         ->type(DayBlueprint::class, ['alert']),
 
+    // Literal keys: extend.php is read during deploys, when a class may not load yet.
     (new Extend\Settings())
-        ->default(Config::INTENSITY, 'festive')
-        ->default(Config::ONCE_A_DAY, true)
-        ->default(Config::MILESTONES, false),
+        ->default('ernestdefoe-fanfare.intensity', 'festive')
+        ->default('ernestdefoe-fanfare.once_a_day', true)
+        ->default('ernestdefoe-fanfare.milestones', false),
 
     // A member's own switches. Sound defaults on so ♪ Play works; nothing ever
     // plays without a tap, and turning it off is remembered on every device.

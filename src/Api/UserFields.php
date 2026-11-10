@@ -52,7 +52,11 @@ class UserFields
                 ->visible($mine)
                 ->writable($mine)
                 ->min(1900)
-                ->max((int) date('Y')),
+                ->max((int) date('Y'))
+                ->set(function (User $user, ?int $value) use ($forget) {
+                    $user->setAttribute('fanfare_birth_year', $value);
+                    $forget($user);
+                }),
 
             Schema\Integer::make('fanfareBirthdayVisibility')
                 ->property('fanfare_birthday_visibility')
