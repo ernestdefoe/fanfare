@@ -94,6 +94,11 @@ html:not(#x-hi) .FanfareWidget a.FanfareWidget-course:hover { color: var(--text-
   .FanfareWidget-row { flex: none; padding: 3px 4px 3px 3px; border-radius: 999px; background: var(--body-bg); }
   .FanfareWidget-name { max-width: 9em; }
 }
+// More chips than fit: the right edge fades until the end is scrolled into view.
+.FanfareWidget--strip.is-more {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
+}
 .FanfareWidget--strip.is-wide { display: flex; }
 @media (max-width: 767px) {
   .IndexPage .FanfareWidget--sidebar { display: none; }

@@ -316,7 +316,7 @@ const SCENES = {
       title: [0, 0, 0, 0],
       foot: [74.5, 14, 72, 23],
       titleHtml: '',
-      footHtml: `<h2 class="Script t-anniv${long(title)}" id="ffTitle" tabindex="-1">${esc(title)}</h2>
+      footHtml: `<h2 class="Script t-anniv${long(title)}${title.length > 40 ? ' longer' : ''}" id="ffTitle" tabindex="-1">${esc(title)}</h2>
         <div class="Acts">${playBtn('play_chime')}${muteBtn()}</div>`,
       play() {
         fx.confetti(180, [primary, secondary, '#ffffff', '#ffd36b']);

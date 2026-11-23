@@ -20,6 +20,7 @@ ernestdefoe-fanfare:
       congratulate: Congratulate
       congratulated: Congratulated
       congratulate_label: "Congratulate {name}"
+      congratulate_sent: "{name} will get your congratulations."
     badge:
       birthday: Birthday today
       anniversary: "{count, plural, one {# year} other {# years}} here today"

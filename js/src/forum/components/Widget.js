@@ -30,13 +30,17 @@ export default class Widget extends Component {
   onremove(vnode) {
     super.onremove(vnode);
     if (!this.fallback()) release(this.attrs.host);
+    if (this.scrollCue) window.removeEventListener('resize', this.scrollCue);
   }
 
   fallback() {
     return this.attrs.host === 'sidebar' || this.attrs.host === 'strip';
   }
 
-  /** The strip shows on wide screens too when the sidebar copy is not on screen. */
+  /**
+   * The strip shows on wide screens too when the sidebar copy is not on screen,
+   * and fades at the right while more chips are out of view.
+   */
   measure() {
     if (this.attrs.host !== 'strip') return;
     const side = document.querySelector('.FanfareWidget--sidebar');
@@ -45,6 +49,15 @@ export default class Widget extends Component {
       this.wide = wanted;
       m.redraw();
     }
+
+    const el = this.element;
+    if (!el) return;
+    if (!this.scrollCue) {
+      this.scrollCue = () => el.classList.toggle('is-more', el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+      el.addEventListener('scroll', this.scrollCue, { passive: true });
+      window.addEventListener('resize', this.scrollCue);
+    }
+    this.scrollCue();
   }
 
   view() {
@@ -170,7 +183,7 @@ export default class Widget extends Component {
       .then(() => {
         const data = app.data.fanfare;
         data.wished = [...(data.wished || []), key];
-        app.alerts.show({ type: 'success' }, t('widget.wish_sent', { name }));
+        app.alerts.show({ type: 'success' }, t(kind === 'course' ? 'widget.congratulate_sent' : 'widget.wish_sent', { name }));
       })
       .finally(() => {
         this.busy = false;

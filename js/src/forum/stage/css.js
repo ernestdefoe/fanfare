@@ -88,8 +88,9 @@ export default `
 html:not(#x-hi) .FanfareStage a.PSoft { color: var(--occ-ink); text-decoration: none; }
 /* on a phone the certificate link is its icon alone, so the row stays on the plaque */
 @container (max-width: 440px) { .FanfareStage .Cert .lbl { display: none; } .FanfareStage .Cert { padding: 0; width: max(40px, 7.4cqw); } }
-/* a Festoon day: the title takes the day's ink */
-.FanfareStage.occ-custom .t-anniv { color: var(--occ-ink); }
+/* a Festoon day: the title takes the day's ink, with room for the script's descenders above the buttons */
+.FanfareStage.occ-custom .t-anniv { color: var(--occ-ink); line-height: 1.35; margin-bottom: max(10px, 2.6cqw); }
+.FanfareStage.occ-custom .t-anniv.longer { font-size: max(15px, 3.5cqw); }
 .FanfareStage .RosetteEmoji { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
 .FanfareStage .sub-anniv { color: #5b6b82; font-weight: 600; margin-top: .2cqw; }
 /* lamps: candles, diyas */
