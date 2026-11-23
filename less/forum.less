@@ -59,6 +59,11 @@ html:not(#x-hi) .FanfareWidget .FanfareWidget-person:hover {
 .FanfareWidget-who { min-width: 0; line-height: 1.25; }
 .FanfareWidget-name { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .FanfareWidget-sub { display: block; font-size: 12px; color: var(--muted-color); }
+// A course completion: the name and the course are their own links (profile, certificate).
+html:not(#x-hi) .FanfareWidget a.FanfareWidget-name,
+html:not(#x-hi) .FanfareWidget a.FanfareWidget-name:hover { color: var(--text-color); text-decoration: none; }
+html:not(#x-hi) .FanfareWidget a.FanfareWidget-course { color: var(--muted-color); text-decoration: none; }
+html:not(#x-hi) .FanfareWidget a.FanfareWidget-course:hover { color: var(--text-color); text-decoration: underline; }
 .FanfareWidget-more { font-size: 12px; color: var(--muted-color); padding: 4px 0 2px; }
 .FanfareWidget .FanfareWidget-wish {
   flex: none;

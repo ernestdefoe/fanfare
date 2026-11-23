@@ -45,6 +45,14 @@ const playBtn = (key = 'play') =>
 /** Titles past about 24 characters step down a size so they stay on the plaque. */
 const long = (text) => (String(text).length > 24 ? ' long' : '');
 const muteBtn = () => `<button class="PRound" id="ffMute" type="button"></button>`;
+/** A color from Festoon: a hex value or the fallback, never anything that could leave the attribute. */
+const color = (value, fallback) => (/^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(String(value)) ? value : fallback);
+const hexA = (hex, a) => {
+  const h = hex.length === 4 ? hex.replace(/[0-9a-f]/gi, (c) => c + c).slice(1) : hex.slice(1);
+  return `rgba(${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)},${a})`;
+};
+/** Only http(s) links: the certificate's page on this forum. */
+const safeUrl = (url) => (/^https?:\/\//i.test(String(url)) ? url : '#');
 
 /* ------------------------------------------------------------------ */
 /* the occasions                                                       */
@@ -273,6 +281,52 @@ const SCENES = {
     },
     calm() {},
   }),
+  course: (m) => ({
+    tune: 'fanfare',
+    btn: '#2d4a7a',
+    ink: '#24365c',
+    spot: 'rgba(255,214,110,.5)',
+    svg: A.gradSVG,
+    title: [0, 0, 0, 0],
+    foot: [72.6, 12, 76, 25.5],
+    titleHtml: '',
+    footHtml: `<h2 class="Script t-anniv${long(host.t('course_title', { name: host.name }))}" id="ffTitle" tabindex="-1">${t('course_title', { name: host.name })}</h2>
+      <p class="Sub sub-anniv">${t('course_sub', { course: m.course || host.t('course_sample') })}</p>
+      <div class="Acts">${playBtn('play_fanfare')}${m.url ? `<a class="PSoft Cert" href="${esc(safeUrl(m.url))}" aria-label="${t('view_certificate')}" title="${t('view_certificate')}"><i class="fas fa-award" aria-hidden="true"></i><span class="lbl"> ${t('view_certificate')}</span></a>` : ''}${muteBtn()}</div>`,
+    play() {
+      fx.confetti(200, ['#ffd36b', '#2d4a7a', '#ffffff', '#c2385f']);
+      later(() => $('.Piece .Cap')?.classList.add('toss'), 900);
+      later(() => lamps().forEach((l) => l.classList.add('lit')), 1500);
+    },
+    calm() {
+      lamps().forEach((l) => l.classList.add('lit'));
+    },
+  }),
+  // A day the admin made in Festoon: its name, emoji and two colors.
+  custom: (m) => {
+    const primary = color(m.primary, '#536f90');
+    const secondary = color(m.secondary, primary);
+    const title = m.name ? host.t('custom_title', { name: m.name }) : host.t('custom_title_unnamed');
+    return {
+      tune: 'chime',
+      btn: primary,
+      ink: '#24324a',
+      spot: hexA(primary, 0.5),
+      svg: () => A.rosetteSVG(primary, secondary, esc(m.emoji || '')),
+      title: [0, 0, 0, 0],
+      foot: [74.5, 14, 72, 23],
+      titleHtml: '',
+      footHtml: `<h2 class="Script t-anniv${long(title)}" id="ffTitle" tabindex="-1">${esc(title)}</h2>
+        <div class="Acts">${playBtn('play_chime')}${muteBtn()}</div>`,
+      play() {
+        fx.confetti(180, [primary, secondary, '#ffffff', '#ffd36b']);
+        later(() => lamps().forEach((l) => l.classList.add('lit')), 1200);
+      },
+      calm() {
+        lamps().forEach((l) => l.classList.add('lit'));
+      },
+    };
+  },
 };
 SCENES.eidfitr = SCENES.eidadha = SCENES.eid;
 SCENES.thanksgiving_ca = SCENES.thanksgiving;

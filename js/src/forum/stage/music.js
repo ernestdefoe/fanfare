@@ -278,7 +278,9 @@ export function playTune(id, btn, playingLabel) {
     nodes.forEach((n) => {
       try {
         n.stop();
-      } catch (e) {}
+      } catch (e) {
+        // A note that already ended throws on stop(); there is nothing left to silence.
+      }
     });
     out.disconnect();
     wet.disconnect();

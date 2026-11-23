@@ -16,6 +16,8 @@ export const local = {
   set(k, v) {
     try {
       window.localStorage.setItem(k, v);
-    } catch (e) {}
+    } catch (e) {
+      // Storage refused: the choice lasts for this page only, which is all a guest can have.
+    }
   },
 };

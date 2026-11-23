@@ -207,20 +207,31 @@ class People
         [$anniversaries, $moreA] = $this->anniversaries($mds, $today);
 
         $ids = array_unique([...array_column($birthdays, 'id'), ...array_column($anniversaries, 'id')]);
-        $users = [];
-
-        if ($ids) {
-            foreach (User::query()->whereIn('id', $ids)->get() as $user) {
-                $users[$user->id] = [
-                    'username' => $user->username,
-                    'name' => $user->display_name,
-                    'avatar' => $user->avatar_url,
-                    'slug' => $this->slugs->forResource(User::class)->toSlug($user),
-                ];
-            }
-        }
+        $users = $ids ? $this->profiles(User::query()->whereIn('id', $ids)->get()->all()) : [];
 
         return ['birthdays' => $birthdays, 'anniversaries' => $anniversaries, 'more' => ['birthdays' => $moreB, 'anniversaries' => $moreA], 'users' => $users];
+    }
+
+    /**
+     * What the widget shows of a member: name, avatar and profile link.
+     *
+     * @param list<User> $users
+     * @return array<int, array{username: string, name: string, avatar: ?string, slug: string}>
+     */
+    public function profiles(array $users): array
+    {
+        $out = [];
+
+        foreach ($users as $user) {
+            $out[$user->id] = [
+                'username' => $user->username,
+                'name' => $user->display_name,
+                'avatar' => $user->avatar_url,
+                'slug' => $this->slugs->forResource(User::class)->toSlug($user),
+            ];
+        }
+
+        return $out;
     }
 
     /**

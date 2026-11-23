@@ -8,7 +8,8 @@ use Flarum\Notification\Blueprint\BlueprintInterface;
 use Flarum\User\User;
 
 /**
- * "Mira wished you a happy birthday." The subject is the member who wished,
+ * "Mira wished you a happy birthday", or congratulated you on finishing a
+ * course (its id and title ride in the data). The subject is the member who wished,
  * so the alert needs no resource of its own and links to their profile.
  *
  * The recipient is in the data: the syncer matches alerts by type, subject
@@ -16,7 +17,14 @@ use Flarum\User\User;
  */
 class WishBlueprint implements BlueprintInterface, AlertableInterface
 {
-    public function __construct(public readonly User $from, public readonly int $to, public readonly string $kind, public readonly int $year)
+    public function __construct(
+        public readonly User $from,
+        public readonly int $to,
+        public readonly string $kind,
+        public readonly int $year,
+        public readonly int $ref = 0,
+        public readonly ?string $title = null,
+    )
     {
     }
 
@@ -32,7 +40,7 @@ class WishBlueprint implements BlueprintInterface, AlertableInterface
 
     public function getData(): array
     {
-        return ['to' => $this->to, 'kind' => $this->kind, 'year' => $this->year];
+        return ['to' => $this->to, 'kind' => $this->kind, 'year' => $this->year] + ($this->ref ? ['ref' => $this->ref, 'title' => $this->title] : []);
     }
 
     public static function getType(): string

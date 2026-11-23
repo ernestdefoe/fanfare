@@ -35,6 +35,11 @@
         "ext-intl": "*",
         "flarum/core": "^2.0"
     },
+    "suggest": {
+        "ernestdefoe/syllabus": "Celebrate members who complete a course",
+        "ernestdefoe/festoon": "Holiday dates from Festoon, and your own Festoon days celebrated too",
+        "datlechin/flarum-birthdays": "Use its birthday field and privacy choices"
+    },
     "autoload": {
         "psr-4": {
             "ErnestDefoe\\Fanfare\\": "src/"
@@ -56,14 +61,19 @@
             },
             "optional-dependencies": [
                 "flarum/gdpr",
+                "flarum/suspend",
                 "ernestdefoe/festoon",
-                "datlechin/flarum-birthdays"
+                "ernestdefoe/syllabus",
+                "datlechin/flarum-birthdays",
+                "ernestdefoe/bespoke",
+                "fof/forum-widgets-core"
             ]
         }
     },
     "require-dev": {
         "datlechin/flarum-birthdays": "^3.0",
         "ernestdefoe/festoon": "^1.3",
+        "ernestdefoe/syllabus": "^1.4",
         "flarum/gdpr": "^2.0",
         "flarum/phpstan": "^2.0",
         "flarum/suspend": "^2.0",

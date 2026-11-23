@@ -3,7 +3,9 @@
 namespace ErnestDefoe\Fanfare\Api;
 
 use Carbon\Carbon;
+use ErnestDefoe\Fanfare\Achievement;
 use ErnestDefoe\Fanfare\Config;
+use ErnestDefoe\Fanfare\Courses;
 use ErnestDefoe\Fanfare\Notification\WishBlueprint;
 use ErnestDefoe\Fanfare\People;
 use ErnestDefoe\Fanfare\Wish;
@@ -19,15 +21,17 @@ use Psr\Http\Server\RequestHandlerInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
- * POST /api/fanfare/wishes {userId, kind}: one tap from the widget. Only for
- * someone whose day it is (around today, as the widget shows) and who shows
- * it; once per pair, occasion and year.
+ * POST /api/fanfare/wishes {userId, kind, achievementId?}: one tap from the
+ * widget. Only for someone whose day it is (around today, as the widget shows)
+ * and who shows it, or who finished a course lately that the actor can see;
+ * once per pair, occasion and year (and course).
  */
 class CreateWishController implements RequestHandlerInterface
 {
     public function __construct(
         protected Config $config,
         protected People $people,
+        protected Courses $courses,
         protected NotificationSyncer $notifications,
         protected TranslatorInterface $translator,
     ) {
@@ -45,7 +49,17 @@ class CreateWishController implements RequestHandlerInterface
         $to = User::query()->find((int) Arr::get($body, 'userId'));
         $today = $this->config->today();
 
-        $year = in_array($kind, Wish::KINDS, true) && $to && $to->id !== $actor->id ? $this->celebrating($to, $kind, $actor, $today) : null;
+        $achievement = null;
+        if (! in_array($kind, Wish::KINDS, true) || ! $to || $to->id === $actor->id) {
+            $year = null;
+        } elseif ($kind === Achievement::COURSE) {
+            $achievement = $this->courses->congratulable($actor, $to, (int) Arr::get($body, 'achievementId'));
+            $year = $achievement ? (int) $achievement->created_at->format('Y') : null;
+        } else {
+            $year = $this->celebrating($to, $kind, $actor, $today);
+        }
+
+        $ref = $achievement ? $achievement->id : 0;
 
         if ($year === null) {
             throw new ValidationException(['wish' => $this->translator->trans('ernestdefoe-fanfare.api.not_their_day')]);
@@ -58,6 +72,7 @@ class CreateWishController implements RequestHandlerInterface
             'to_user_id' => $to->id,
             'kind' => $kind,
             'year' => $year,
+            'ref_id' => $ref,
             'created_at' => Carbon::now(),
         ]);
 
@@ -65,7 +80,7 @@ class CreateWishController implements RequestHandlerInterface
             return new JsonResponse(['wished' => true]);
         }
 
-        $this->notifications->sync(new WishBlueprint($actor, $to->id, $kind, $year), [$to]);
+        $this->notifications->sync(new WishBlueprint($actor, $to->id, $kind, $year, $ref, $achievement?->title), [$to]);
 
         return new JsonResponse(['wished' => true], 201);
     }

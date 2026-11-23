@@ -4,8 +4,8 @@ namespace ErnestDefoe\Fanfare;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use Flarum\Extension\ExtensionManager;
 use Flarum\Settings\SettingsRepositoryInterface;
+use Illuminate\Contracts\Container\Container;
 
 /**
  * Fanfare's settings, read once per request and cleaned.
@@ -21,30 +21,66 @@ class Config
     public const FORUM_BIRTHDAY = self::P.'forum_birthday';
     public const MILESTONES = self::P.'milestones';
     public const TIMEZONE = self::P.'timezone';
+    public const COURSES = self::P.'courses';
+    public const COURSES_PUBLIC = self::P.'courses_public';
 
     public const INTENSITIES = ['subtle', 'festive', 'full'];
     public const MILESTONE_YEARS = [1, 5, 10, 15, 20, 25, 30];
 
-    /** @var array<string, array{on: bool, shift: int}>|null */
+    /**
+     * Worked out once per settings value: Config is a singleton, and a queue
+     * worker lives through many setting changes.
+     *
+     * @var array{0: string, 1: array<string, array{on: bool, shift: int}>}|null
+     */
     protected ?array $occasions = null;
 
-    public function __construct(protected SettingsRepositoryInterface $settings, protected ExtensionManager $extensions)
+    /** @var array{0: string, 1: array<string, array{name: string, emoji: string, primary: string, secondary: string, from: string, to: string}>}|null */
+    protected ?array $custom = null;
+
+    /** Set by extend.php's Extend\Conditional blocks, one per extension Fanfare works with. */
+    public const WITH = 'ernestdefoe-fanfare.with.';
+
+    public function __construct(protected SettingsRepositoryInterface $settings, protected Container $container)
     {
+    }
+
+    /** Whether an extension Fanfare works with is enabled: festoon, datlechin, syllabus or suspend. */
+    protected function with(string $name): bool
+    {
+        return $this->container->bound(self::WITH.$name);
     }
 
     public function festoon(): bool
     {
-        return $this->extensions->isEnabled('ernestdefoe-festoon') && class_exists(\Ernestdefoe\Festoon\Config::class);
+        return $this->with('festoon');
     }
 
     public function datlechin(): bool
     {
-        return $this->extensions->isEnabled('datlechin-birthdays');
+        return $this->with('datlechin');
+    }
+
+    public function syllabus(): bool
+    {
+        return $this->with('syllabus');
+    }
+
+    /** Course completions are celebrated: Syllabus is on and the admin hasn't turned them off. */
+    public function courses(): bool
+    {
+        return $this->syllabus() && (bool) $this->settings->get(self::COURSES);
+    }
+
+    /** Other members see who finished a course (the student always gets their own moment). */
+    public function coursesPublic(): bool
+    {
+        return (bool) $this->settings->get(self::COURSES_PUBLIC);
     }
 
     public function suspend(): bool
     {
-        return $this->extensions->isEnabled('flarum-suspend');
+        return $this->with('suspend');
     }
 
     /**
@@ -53,10 +89,10 @@ class Config
      */
     public function timezone(): DateTimeZone
     {
-        $tz = (string) $this->settings->get(self::TIMEZONE, '');
+        $tz = (string) $this->settings->get(self::TIMEZONE);
 
         if ($tz === '' && $this->festoon()) {
-            $tz = resolve(\Ernestdefoe\Festoon\Config::class)->timezone();
+            $tz = $this->container->make(\Ernestdefoe\Festoon\Config::class)->timezone();
         }
 
         return new DateTimeZone(in_array($tz, timezone_identifiers_list(), true) ? $tz : date_default_timezone_get());
@@ -69,17 +105,22 @@ class Config
 
     /**
      * Per-occasion overrides: on or off, and a shift of a day either way for
-     * moon-sighted dates.
+     * moon-sighted dates. Festoon's own days follow the built-in ones, on
+     * unless the admin turned one off here.
      *
      * @return array<string, array{on: bool, shift: int}>
      */
     public function occasions(): array
     {
-        if ($this->occasions !== null) {
-            return $this->occasions;
+        $raw = (string) $this->settings->get(self::OCCASIONS);
+        $days = $this->festoonDays();
+        $key = $raw.'|'.implode(',', array_keys($days));
+
+        if ($this->occasions !== null && $this->occasions[0] === $key) {
+            return $this->occasions[1];
         }
 
-        $stored = json_decode((string) $this->settings->get(self::OCCASIONS, ''), true);
+        $stored = json_decode($raw, true);
         $out = [];
 
         foreach (Occasions::CATALOGUE as $id => $o) {
@@ -90,24 +131,68 @@ class Config
             ];
         }
 
-        return $this->occasions = $out;
+        foreach (array_keys($days) as $id) {
+            $row = is_array($stored[$id] ?? null) ? $stored[$id] : [];
+            $out[$id] = ['on' => (bool) ($row['on'] ?? true), 'shift' => 0];
+        }
+
+        return ($this->occasions = [$key, $out])[1];
+    }
+
+    /**
+     * The days an admin made in Festoon (Festoon → Your own looks) and left
+     * switched on there: a name, an emoji, two colors and a run of dates.
+     *
+     * @return array<string, array{name: string, emoji: string, primary: string, secondary: string, from: string, to: string}>
+     */
+    public function festoonDays(): array
+    {
+        if (! $this->festoon()) {
+            return [];
+        }
+
+        $key = $this->settings->get('ernestdefoe-festoon.custom').'|'.$this->settings->get('ernestdefoe-festoon.looks');
+        if ($this->custom !== null && $this->custom[0] === $key) {
+            return $this->custom[1];
+        }
+
+        $out = [];
+
+        foreach ($this->container->make(\Ernestdefoe\Festoon\Config::class)->looks() as $id => $look) {
+            $date = $look->date();
+
+            if ($look->group() !== 'custom' || ! $look->enabled() || ($date['type'] ?? '') !== 'range') {
+                continue;
+            }
+
+            $out[$id] = [
+                'name' => $look->name(),
+                'emoji' => $look->get('emoji'),
+                'primary' => $look->get('primary'),
+                'secondary' => $look->get('secondary'),
+                'from' => (string) $date['from'],
+                'to' => (string) $date['to'],
+            ];
+        }
+
+        return ($this->custom = [$key, $out])[1];
     }
 
     public function intensity(): string
     {
-        $v = (string) $this->settings->get(self::INTENSITY, 'festive');
+        $v = (string) $this->settings->get(self::INTENSITY);
 
         return in_array($v, self::INTENSITIES, true) ? $v : 'festive';
     }
 
     public function onceADay(): bool
     {
-        return (bool) $this->settings->get(self::ONCE_A_DAY, true);
+        return (bool) $this->settings->get(self::ONCE_A_DAY);
     }
 
     public function milestonesOnly(): bool
     {
-        return (bool) $this->settings->get(self::MILESTONES, false);
+        return (bool) $this->settings->get(self::MILESTONES);
     }
 
     /** Quiet hours, in the forum's timezone: no bursts and nothing that moves. */
@@ -128,7 +213,7 @@ class Config
     /** The forum's birthday as Y-m-d, or null to use the day the first member joined. */
     public function forumBirthday(): ?string
     {
-        $v = (string) $this->settings->get(self::FORUM_BIRTHDAY, '');
+        $v = (string) $this->settings->get(self::FORUM_BIRTHDAY);
 
         return preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) ? $v : null;
     }
@@ -136,8 +221,8 @@ class Config
     /** A fingerprint of everything that changes what today looks like. */
     public function hash(): string
     {
-        // Festoon's looks carry the admin's date overrides, which change Festoon-sourced dates.
-        $festoon = $this->festoon() ? (string) $this->settings->get('ernestdefoe-festoon.looks', '') : '';
+        // Festoon's looks carry the admin's date overrides, and its own days live beside them.
+        $festoon = $this->festoon() ? $this->settings->get('ernestdefoe-festoon.looks').$this->settings->get('ernestdefoe-festoon.custom') : '';
 
         return substr(md5(json_encode([$this->occasions(), $this->forumBirthday(), $this->milestonesOnly(), $festoon, $this->datlechin(), $this->suspend(), $this->timezone()->getName()]) ?: ''), 0, 8);
     }

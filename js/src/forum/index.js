@@ -11,6 +11,8 @@ import settingsItems from './settings';
 import { localDay, moments, peopleToday, emoji } from './today';
 import { t, text, local } from './util';
 
+export { default as extend } from './extend';
+
 /*
  * forum.js is on every page, so it only wires things up: member settings,
  * notifications, and on a day with something on, the badge, the widget, the
@@ -52,7 +54,7 @@ app.initializers.add('ernestdefoe-fanfare', () => {
     }
   });
 
-  if (birthdays.size || anniversaries.size) {
+  if (birthdays.size || anniversaries.size || data.courses?.list.length) {
     registerHosts(app, (host) => <Widget host={host} />);
     extend(IndexSidebar.prototype, 'items', (items) => items.add('fanfare', <Widget host="sidebar" />, -20));
     extend(IndexPage.prototype, 'contentItems', (items) => items.add('fanfare', <Widget host="strip" />, 110));
@@ -75,7 +77,7 @@ app.initializers.add('ernestdefoe-fanfare', () => {
         onclick={() => openStage(moment)}
       >
         <span className="FanfarePill-emoji" aria-hidden="true">
-          {emoji(moment.id)}
+          {emoji(moment)}
         </span>
         {label ? <span className="FanfarePill-label">{label}</span> : null}
       </button>,
@@ -106,14 +108,19 @@ app.initializers.add('ernestdefoe-fanfare', () => {
   }
 
   // First visit of the day: the moment opens by itself (once, unless the admin wants it every time).
+  // A course completion opens by itself once, ever; afterwards it waits behind the header button.
   setTimeout(() => {
-    const first = mine[0];
-    const key = first.id + ':' + day.ymd;
-    if (data.settings?.onceADay && seen() === key && !data.settings?.preview) return;
+    const course = mine.find((x) => x.id === 'course');
+    const fresh = course && (course.achievement > courseSeen() || data.settings?.preview);
+    const first = fresh ? course : mine.find((x) => x.id !== 'course');
+    if (!first) return;
+    const key = (first.key || first.id) + ':' + day.ymd;
+    if (!fresh && data.settings?.onceADay && seen() === key && !data.settings?.preview) return;
     // A cookie or consent banner is answered first: the moment waits for it to go.
     const go = () => {
       if (consentShowing()) return setTimeout(go, 1000);
-      markSeen(key);
+      if (fresh) markCourseSeen(course.achievement);
+      else markSeen(key);
       openStage(first);
     };
     go();
@@ -176,6 +183,14 @@ function countdown(left) {
 function seen() {
   const user = app.session.user;
   return user ? user.preferences()?.fanfareSeen || '' : local.get('fanfareSeen') || '';
+}
+
+function courseSeen() {
+  return Number(app.session.user?.preferences()?.fanfareCourseSeen) || 0;
+}
+
+function markCourseSeen(id) {
+  if (id > courseSeen()) app.session.user.savePreferences({ fanfareCourseSeen: id });
 }
 
 function markSeen(key) {

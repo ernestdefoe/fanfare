@@ -78,6 +78,19 @@ export default `
 .FanfareStage .yrsl { max-width: 100%; overflow-wrap: anywhere; text-align: center; color: #dfe7f6; font-weight: 700; font-size: max(11px, 2.2cqw); letter-spacing: .16em; text-transform: uppercase; margin-top: .6cqw; }
 .FanfareStage .t-anniv { color: #2d4a7a; font-size: max(19px, 5.2cqw); line-height: 1.3; }
 .FanfareStage .t-anniv.long { font-size: max(17px, 4.2cqw); }
+/* a course completed: the cap is tossed and comes back down; the tassel sways */
+.FanfareStage .Cap { transform-box: view-box; transform-origin: 300px 200px; }
+.FanfareStage .Cap.toss { animation: ff-toss 1.4s cubic-bezier(.3,.6,.4,1) both; }
+@keyframes ff-toss { 0% { transform: none; } 45% { transform: translateY(-120px) rotate(-14deg); } 75% { transform: translateY(8px) rotate(3deg); } 100% { transform: none; } }
+.FanfareStage .Tassel { transform-box: view-box; transform-origin: 300px 191px; animation: ff-sway 3.2s ease-in-out infinite alternate; }
+@keyframes ff-sway { from { transform: rotate(-2deg); } to { transform: rotate(3deg); } }
+/* the certificate link: theme link colors never reach it */
+html:not(#x-hi) .FanfareStage a.PSoft { color: var(--occ-ink); text-decoration: none; }
+/* on a phone the certificate link is its icon alone, so the row stays on the plaque */
+@container (max-width: 440px) { .FanfareStage .Cert .lbl { display: none; } .FanfareStage .Cert { padding: 0; width: max(40px, 7.4cqw); } }
+/* a Festoon day: the title takes the day's ink */
+.FanfareStage.occ-custom .t-anniv { color: var(--occ-ink); }
+.FanfareStage .RosetteEmoji { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
 .FanfareStage .sub-anniv { color: #5b6b82; font-weight: 600; margin-top: .2cqw; }
 /* lamps: candles, diyas */
 .FanfareStage .Lamp .Flame { transform-box: view-box; opacity: 0; transform: scale(.15); transition: opacity .25s, transform .4s cubic-bezier(.3,1.7,.5,1); }

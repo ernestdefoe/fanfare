@@ -2,7 +2,7 @@ import app from 'flarum/forum/app';
 import Notification from 'flarum/forum/components/Notification';
 import { t } from './util';
 
-/** "Mira wished you a happy birthday." Links to Mira's profile. */
+/** "Mira wished you a happy birthday", or congratulated you on a course. Links to Mira's profile. */
 export class WishNotification extends Notification {
   icon() {
     return 'fas fa-gift';
@@ -15,8 +15,10 @@ export class WishNotification extends Notification {
 
   content() {
     const n = this.attrs.notification;
-    const kind = (n.content() || {}).kind === 'anniversary' ? 'anniversary' : 'birthday';
-    return t('notifications.wish_' + kind, { username: n.fromUser()?.displayName() });
+    const data = n.content() || {};
+    const username = n.fromUser()?.displayName();
+    if (data.kind === 'course') return t('notifications.wish_course', { username, course: data.title || '' });
+    return t('notifications.wish_' + (data.kind === 'anniversary' ? 'anniversary' : 'birthday'), { username });
   }
 
   excerpt() {

@@ -27,15 +27,11 @@ const EMOJI = {
 export default class Occasions extends Component {
   view() {
     const { setting, data } = this.attrs;
-    const stored = parse(setting());
+    this.stored = parse(setting());
+    this.base = app.forum.attribute('baseUrl');
+    this.fmt = new Intl.DateTimeFormat(app.translator.getLocale?.() || 'en', { month: 'short', day: 'numeric', year: 'numeric' });
     const catalogue = data.catalogue || {};
-    const base = app.forum.attribute('baseUrl');
-    const fmt = new Intl.DateTimeFormat(app.translator.getLocale?.() || 'en', { month: 'short', day: 'numeric', year: 'numeric' });
-
-    const update = (id, change) => {
-      const next = { ...stored, [id]: { ...(stored[id] || {}), ...change } };
-      setting(JSON.stringify(next));
-    };
+    const custom = data.custom || {};
 
     return (
       <div className="Form-group FanfareOccasions">
@@ -46,7 +42,7 @@ export default class Occasions extends Component {
         <p className="FanfareOccasions-people">
           {t('settings.preview_people')}{' '}
           {['birthday', 'anniversary', 'forum'].map((id) => (
-            <a className="Button Button--flat" href={`${base}/?fanfare=${id}`} target="_blank" rel="noopener">
+            <a className="Button Button--flat" href={`${this.base}/?fanfare=${id}`} target="_blank" rel="noopener">
               <i className="fas fa-eye" aria-hidden="true" /> {t('occasions.' + id)}
             </a>
           ))}
@@ -62,42 +58,48 @@ export default class Occasions extends Component {
               </tr>
             </thead>
             <tbody>
-              {Object.keys(catalogue).map((id) => {
-                const c = catalogue[id];
-                const row = stored[id] || {};
-                const on = row.on ?? c.on;
-                const next = data.next?.[id];
-
-                return (
-                  <tr key={id}>
-                    <td className="FanfareOccasions-name">
-                      <Switch state={on} onchange={(v) => update(id, { on: v })}>
-                        <span aria-hidden="true">{EMOJI[id]}</span> {t('occasions.' + id)}
-                      </Switch>
-                      {data.festoon && c.festoon ? <span className="FanfareOccasions-festoon">{t('settings.from_festoon')}</span> : null}
-                    </td>
-                    <td className="FanfareOccasions-next">{next ? fmt.format(new Date(next + 'T12:00')) : '—'}</td>
-                    <td>
-                      {c.shift ? (
-                        <Select
-                          value={String(row.shift || 0)}
-                          options={{ '-1': t('settings.shift_minus'), 0: t('settings.shift_0'), 1: t('settings.shift_plus') }}
-                          onchange={(v) => update(id, { shift: Number(v) })}
-                        />
-                      ) : null}
-                    </td>
-                    <td>
-                      <a className="Button Button--flat" href={`${base}/?fanfare=${id}`} target="_blank" rel="noopener">
-                        <i className="fas fa-eye" aria-hidden="true" /> {t('settings.preview')}
-                      </a>
-                    </td>
-                  </tr>
-                );
-              })}
+              {Object.keys(catalogue).map((id) =>
+                this.row(id, catalogue[id].on, EMOJI[id], t('occasions.' + id), data.festoon && catalogue[id].festoon, catalogue[id].shift)
+              )}
+              {/* The days an admin made in Festoon: on unless turned off here. */}
+              {Object.keys(custom).map((id) => this.row(id, true, custom[id].emoji || '🎉', custom[id].name || id, true, false))}
             </tbody>
           </table>
         </div>
       </div>
+    );
+  }
+
+  row(id, onByDefault, emoji, label, fromFestoon, shift) {
+    const { setting, data } = this.attrs;
+    const row = this.stored[id] || {};
+    const next = data.next?.[id];
+    const update = (change) => setting(JSON.stringify({ ...this.stored, [id]: { ...row, ...change } }));
+
+    return (
+      <tr key={id}>
+        <td className="FanfareOccasions-name">
+          <Switch state={row.on ?? onByDefault} onchange={(v) => update({ on: v })}>
+            <span aria-hidden="true">{emoji}</span> {label}
+          </Switch>
+          {fromFestoon ? <span className="FanfareOccasions-festoon">{t('settings.from_festoon')}</span> : null}
+        </td>
+        <td className="FanfareOccasions-next">{next ? this.fmt.format(new Date(next + 'T12:00')) : '—'}</td>
+        <td>
+          {shift ? (
+            <Select
+              value={String(row.shift || 0)}
+              options={{ '-1': t('settings.shift_minus'), 0: t('settings.shift_0'), 1: t('settings.shift_plus') }}
+              onchange={(v) => update({ shift: Number(v) })}
+            />
+          ) : null}
+        </td>
+        <td>
+          <a className="Button Button--flat" href={`${this.base}/?fanfare=${id}`} target="_blank" rel="noopener">
+            <i className="fas fa-eye" aria-hidden="true" /> {t('settings.preview')}
+          </a>
+        </td>
+      </tr>
     );
   }
 }
@@ -107,6 +109,7 @@ function parse(value) {
     const v = JSON.parse(value || '{}');
     return v && typeof v === 'object' ? v : {};
   } catch (e) {
+    // A setting saved by hand that isn't JSON: start from the defaults.
     return {};
   }
 }

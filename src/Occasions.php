@@ -5,6 +5,7 @@ namespace ErnestDefoe\Fanfare;
 use DateTimeImmutable;
 use ErnestDefoe\Fanfare\Calendar\Dates;
 use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Contracts\Container\Container;
 
 /**
  * The holidays Fanfare celebrates, and which of them are on around today.
@@ -13,7 +14,8 @@ use Illuminate\Contracts\Cache\Repository;
  * moment runs, and the id Festoon uses for the same holiday. With Festoon
  * installed its dates are used, overrides included, so the two never
  * disagree; without it Fanfare works them out with its own copy of Festoon's
- * calendar code.
+ * calendar code. The days an admin made in Festoon are occasions too, with
+ * their own names, emoji and colors (Config::festoonDays()).
  */
 class Occasions
 {
@@ -40,7 +42,7 @@ class Occasions
 
     protected ?object $festoonDates = null;
 
-    public function __construct(protected Config $config, protected Repository $cache)
+    public function __construct(protected Config $config, protected Repository $cache, protected Container $container)
     {
     }
 
@@ -68,7 +70,8 @@ class Occasions
 
                 foreach ($this->runs($id, (int) $today->format('Y')) as $run) {
                     if ($run['to'] >= $lo && $run['from'] <= $hi) {
-                        $out[] = ['id' => $id] + $run;
+                        $day = $this->config->festoonDays()[$id] ?? null;
+                        $out[] = ['id' => $id] + $run + ($day ? ['custom' => array_diff_key($day, ['from' => 1, 'to' => 1])] : []);
                         break;
                     }
                 }
@@ -85,6 +88,10 @@ class Occasions
      */
     public function runs(string $id, int $year): array
     {
+        if ($custom = $this->config->festoonDays()[$id] ?? null) {
+            return $this->customRuns($custom, $year);
+        }
+
         $o = self::CATALOGUE[$id] ?? null;
         if ($o === null) {
             return [];
@@ -117,7 +124,7 @@ class Occasions
         $year = (int) substr($today, 0, 4);
         $out = [];
 
-        foreach (array_keys(self::CATALOGUE) as $id) {
+        foreach ([...array_keys(self::CATALOGUE), ...array_keys($this->config->festoonDays())] as $id) {
             $out[$id] = null;
             foreach ($this->runs($id, $year) as $run) {
                 if ($run['to'] >= $today) {
@@ -130,6 +137,37 @@ class Occasions
         return $out;
     }
 
+    /**
+     * A Festoon day's run in the years around $year: from its first month-day to
+     * its last, into the next year when it wraps (December 30 to January 2).
+     * The moment is on its first day.
+     *
+     * @param array{from: string, to: string} $custom
+     * @return list<array{from: string, to: string, day: string}>
+     */
+    protected function customRuns(array $custom, int $year): array
+    {
+        $out = [];
+
+        foreach ([$year - 1, $year, $year + 1] as $y) {
+            [$fm, $fd] = array_map('intval', explode('-', $custom['from']));
+            [$tm, $td] = array_map('intval', explode('-', $custom['to']));
+            $ty = $custom['to'] < $custom['from'] ? $y + 1 : $y;
+
+            // February 29 in a common year falls back to the 28th, as birthdays do.
+            $from = sprintf('%04d-%02d-%02d', $y, $fm, min($fd, self::monthLength($y, $fm)));
+            $to = sprintf('%04d-%02d-%02d', $ty, $tm, min($td, self::monthLength($ty, $tm)));
+            $out[] = ['from' => $from, 'to' => $to, 'day' => $from];
+        }
+
+        return $out;
+    }
+
+    protected static function monthLength(int $year, int $month): int
+    {
+        return (int) (new DateTimeImmutable(sprintf('%04d-%02d-01', $year, $month)))->format('t');
+    }
+
     /** The main day of an occasion in a Gregorian year, from Festoon when it is installed. */
     protected function date(string $id, int $year): ?DateTimeImmutable
     {
@@ -138,7 +176,7 @@ class Occasions
 
         if ($this->config->festoon() && isset(self::CATALOGUE[$id]['festoon'])) {
             [$look, $part] = explode(':', self::CATALOGUE[$id]['festoon']) + [1 => 'date'];
-            $found = resolve(\Ernestdefoe\Festoon\Config::class)->look($look)?->toArray()[$part] ?? null;
+            $found = $this->container->make(\Ernestdefoe\Festoon\Config::class)->look($look)?->toArray()[$part] ?? null;
 
             if (is_array($found) && ($day = ($this->festoonDates ??= new \Ernestdefoe\Festoon\Calendar\Dates($tz, $this->cache))->on($found, $year))) {
                 return $day;

@@ -35,17 +35,26 @@ const EMOJI = {
   halloween: '🎃',
   thanksgiving: '🍂',
   thanksgiving_ca: '🍂',
+  course: '🎓',
 };
 
-export const emoji = (id) => EMOJI[id] || '🎉';
+/** A moment's emoji: a Festoon day brings its own. */
+export const emoji = (moment) => (moment.id === 'custom' && moment.emoji) || EMOJI[moment.id] || '🎉';
 
 /**
- * The moments for this member today, most personal first: their birthday,
- * their join anniversary, the forum's birthday, then the holidays.
+ * The moments for this member today, most personal first: a course they just
+ * completed, their birthday, their join anniversary, the forum's birthday,
+ * then the holidays (Festoon's own days among them).
  */
 export function moments(data, day = localDay()) {
   const out = [];
   const mine = data.mine;
+
+  // Completions stay a few days; the newest is the one celebrated.
+  const course = (data.myCourses || [])[0];
+  if (course) {
+    out.push({ id: 'course', key: 'course:' + course.id, achievement: course.id, course: course.title, url: course.url });
+  }
 
   if (mine?.birthday && mine.md && isToday(mine.md, day)) {
     out.push({ id: 'birthday', wishedBy: mine.wishedBy, wishedCount: mine.wishedCount });
@@ -62,7 +71,8 @@ export function moments(data, day = localDay()) {
   for (const o of data.occasions || []) {
     if (o.from > day.ymd || o.to < day.ymd) continue;
 
-    const m = { id: o.id, year: day.year };
+    // A Festoon day: its own name, emoji and colors on a shared centrepiece.
+    const m = o.custom ? { id: 'custom', key: o.id, ...o.custom, year: day.year } : { id: o.id, year: day.year };
     if (o.id === 'newyear') {
       m.eve = day.ymd < o.day;
       m.year = Number(o.day.slice(0, 4));

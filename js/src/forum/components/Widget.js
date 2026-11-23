@@ -7,7 +7,8 @@ import { t } from '../util';
 import { claim, release, hosted } from '../hosts';
 
 /**
- * Today's birthdays and join anniversaries, with a one-tap wish.
+ * Today's birthdays and join anniversaries, and who finished a course lately,
+ * with a one-tap wish (Congratulate, for a course).
  *
  * host: 'sidebar' (the index sidebar), 'strip' (chips above the discussion
  * list: on phones, and on wide screens whenever the sidebar copy isn't
@@ -51,11 +52,13 @@ export default class Widget extends Component {
     const today = peopleToday(data);
     const strip = this.attrs.host === 'strip';
 
-    if ((!today.birthdays.length && !today.anniversaries.length) || (this.fallback() && hosted())) return null;
+    const courses = data.courses?.list || [];
+
+    if ((!today.birthdays.length && !today.anniversaries.length && !courses.length) || (this.fallback() && hosted())) return null;
 
     const rows = (list, kind) =>
       list.map((p) => {
-        const u = data.people.users[p.id];
+        const u = data.people?.users[p.id];
         if (!u) return null;
         const sub = kind === 'birthday' ? (p.age ? t('widget.turns', { age: p.age }) : null) : t('widget.years', { count: p.years });
 
@@ -94,18 +97,55 @@ export default class Widget extends Component {
             {more(data.people.more.anniversaries)}
           </div>
         ) : null}
+        {courses.length ? (
+          <div className="FanfareWidget-group">
+            <h4 className="FanfareWidget-heading">🎓 {t('widget.courses')}</h4>
+            {courses.map((c) => this.courseRow(c, strip))}
+            {more(data.courses.more)}
+          </div>
+        ) : null}
       </section>
     );
   }
 
-  wishButton(id, kind, name) {
+  /** Who finished a course: the course links to its certificate's public page. */
+  courseRow(c, strip) {
+    const u = app.data.fanfare.courses.users[c.user];
+    if (!u) return null;
+    const title = c.url ? (
+      <a href={c.url} className="FanfareWidget-sub FanfareWidget-course">
+        {c.title}
+      </a>
+    ) : (
+      <span className="FanfareWidget-sub">{c.title}</span>
+    );
+
+    return (
+      <div className="FanfareWidget-row" key={'course' + c.id}>
+        <span className="FanfareWidget-person">
+          <Link href={app.route('user', { username: u.slug })}>{avatar(u)}</Link>
+          <span className="FanfareWidget-who">
+            <Link href={app.route('user', { username: u.slug })} className="FanfareWidget-name">
+              {u.name}
+            </Link>
+            {strip ? null : title}
+          </span>
+        </span>
+        {this.wishButton(c.user, 'course', u.name, c.id)}
+      </div>
+    );
+  }
+
+  /** ref: the course completion a Congratulate is for. */
+  wishButton(id, kind, name, ref) {
     const data = app.data.fanfare;
     if (!data.canWish || Number(app.session.user?.id()) === id) return null;
+    const key = kind + ':' + (kind === 'course' ? ref : id);
 
-    if ((data.wished || []).includes(kind + ':' + id)) {
+    if ((data.wished || []).includes(key)) {
       return (
         <span className="FanfareWidget-wished">
-          <i className="fas fa-check" aria-hidden="true" /> {t('widget.wished')}
+          <i className="fas fa-check" aria-hidden="true" /> {t(kind === 'course' ? 'widget.congratulated' : 'widget.wished')}
         </span>
       );
     }
@@ -114,22 +154,22 @@ export default class Widget extends Component {
       <button
         type="button"
         className="Button Button--flat FanfareWidget-wish"
-        aria-label={t('widget.wish_label', { name })}
+        aria-label={t(kind === 'course' ? 'widget.congratulate_label' : 'widget.wish_label', { name })}
         disabled={this.busy}
-        onclick={() => this.wish(id, kind, name)}
+        onclick={() => this.wish(id, kind, name, ref, key)}
       >
-        🎉 {t('widget.wish')}
+        🎉 {t(kind === 'course' ? 'widget.congratulate' : 'widget.wish')}
       </button>
     );
   }
 
-  wish(id, kind, name) {
+  wish(id, kind, name, ref, key) {
     this.busy = true;
     app
-      .request({ method: 'POST', url: app.forum.attribute('apiUrl') + '/fanfare/wishes', body: { userId: id, kind } })
+      .request({ method: 'POST', url: app.forum.attribute('apiUrl') + '/fanfare/wishes', body: { userId: id, kind, achievementId: ref } })
       .then(() => {
         const data = app.data.fanfare;
-        data.wished = [...(data.wished || []), kind + ':' + id];
+        data.wished = [...(data.wished || []), key];
         app.alerts.show({ type: 'success' }, t('widget.wish_sent', { name }));
       })
       .finally(() => {
