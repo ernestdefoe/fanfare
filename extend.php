@@ -17,6 +17,7 @@ use ErnestDefoe\Fanfare\Console\GreetCommand;
 use ErnestDefoe\Fanfare\Content\AdminPayload;
 use ErnestDefoe\Fanfare\Content\Inject;
 use ErnestDefoe\Fanfare\Extend\With;
+use ErnestDefoe\Fanfare\Listener\ForgetCourseList;
 use ErnestDefoe\Fanfare\Listener\RecordCourseCompletion;
 use ErnestDefoe\Fanfare\Notification\DayBlueprint;
 use ErnestDefoe\Fanfare\Notification\WishBlueprint;
@@ -25,6 +26,7 @@ use Flarum\Api\Resource\ForumResource;
 use Flarum\Api\Resource\UserResource;
 use Flarum\Extend;
 use Flarum\Gdpr\Extend\UserData;
+use Flarum\User\Event\Saving;
 use Illuminate\Console\Scheduling\Event;
 
 return [
@@ -84,7 +86,9 @@ return [
         ->whenExtensionEnabled('ernestdefoe-syllabus', fn () => [
             new With('syllabus'),
             // Course completions, confirmed by Syllabus.
-            (new Extend\Event())->listen(\Ernestdefoe\Syllabus\Event\CourseCompleted::class, RecordCourseCompletion::class),
+            (new Extend\Event())
+                ->listen(\Ernestdefoe\Syllabus\Event\CourseCompleted::class, RecordCourseCompletion::class)
+                ->listen(Saving::class, ForgetCourseList::class),
         ])
         ->whenExtensionEnabled('ernestdefoe-festoon', fn () => [new With('festoon')])
         ->whenExtensionEnabled('datlechin-birthdays', fn () => [new With('datlechin')])

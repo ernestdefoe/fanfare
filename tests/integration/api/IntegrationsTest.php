@@ -127,6 +127,16 @@ class IntegrationsTest extends TestCase
 
         $this->complete(3, 1);
         $this->assertNotNull($this->payload(2)['courses'] ?? null);
+
+        // Turning courses private in Syllabus takes effect at once, not when the cached list runs out.
+        $private = fn (bool $show) => $this->send($this->request('PATCH', '/api/users/3', [
+            'authenticatedAs' => 3,
+            'json' => ['data' => ['type' => 'users', 'id' => '3', 'attributes' => ['preferences' => ['syllabusShowCourses' => $show]]]],
+        ]));
+        $this->assertSame(200, $private(false)->getStatusCode());
+        $this->assertNull($this->payload(2)['courses'] ?? null, 'private at once');
+        $private(true);
+        $this->assertNotNull($this->payload(2)['courses'] ?? null);
         $this->assertNull($this->payload(null)['courses'] ?? null, 'guests need See today\'s birthdays');
 
         $this->set(Config::COURSES_PUBLIC, false);

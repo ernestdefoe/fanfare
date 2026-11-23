@@ -49,6 +49,12 @@ class Courses
             'created_at' => Carbon::now(),
         ]);
 
+        $this->forget();
+    }
+
+    /** Drop the cached list: a completion was recorded, or a member's standing or privacy changed. */
+    public function forget(): void
+    {
         $this->cache->forget(self::CACHE);
     }
 

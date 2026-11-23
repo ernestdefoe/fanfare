@@ -16,9 +16,7 @@ use Flarum\Post\Post;
 use Flarum\User\User;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Filesystem\Factory;
-use Flarum\Http\UrlGenerator;
 use Illuminate\Contracts\Filesystem\Cloud;
-use Illuminate\Contracts\Filesystem\Filesystem;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 /**
@@ -33,7 +31,7 @@ class Inject
 {
     public const PREVIEW = 'fanfare';
 
-    protected Filesystem $assets;
+    protected Cloud $assets;
 
     public function __construct(
         protected Config $config,
@@ -41,10 +39,11 @@ class Inject
         protected People $people,
         protected Courses $courses,
         protected Repository $cache,
-        protected UrlGenerator $url,
         Factory $filesystems,
     ) {
-        $this->assets = $filesystems->disk('flarum-assets');
+        $disk = $filesystems->disk('flarum-assets');
+        // Flarum's assets disk always has URLs (local or S3); the stage script is served from it.
+        $this->assets = $disk instanceof Cloud ? $disk : throw new \RuntimeException('Fanfare needs an assets disk that serves URLs.');
     }
 
     public function __invoke(Document $document, Request $request): void
@@ -314,8 +313,8 @@ class Inject
                 $this->assets->put($path, $contents);
             }
 
-            // The disk's own URL (S3 and the like), else the forum's: right in a subfolder install too.
-            return $this->assets instanceof Cloud ? $this->assets->url($path) : $this->url->to('forum')->path('assets/'.$path);
+            // The disk's own URL: right on S3 and in a subfolder install alike.
+            return $this->assets->url($path);
         });
     }
 }
