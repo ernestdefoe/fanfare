@@ -583,5 +583,4 @@ export function medalSVG(years) {
     <rect x="80" y="494" width="440" height="198" rx="26" fill="url(#ff-plaque2)" stroke="url(#ff-gold)" stroke-width="4"/></svg>`;
 }
 
-
 export { gradSVG, rosetteSVG } from './art-days';

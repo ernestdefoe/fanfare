@@ -9,7 +9,12 @@ const data = () => app.data.fanfareAdmin || {};
 export default [
   new Extend.Admin()
     .permission(
-      () => ({ icon: 'fas fa-cake-candles', label: app.translator.trans(`${NS}.admin.permissions.view_people`), permission: `${NS}.viewPeople`, allowGuest: true }),
+      () => ({
+        icon: 'fas fa-cake-candles',
+        label: app.translator.trans(`${NS}.admin.permissions.view_people`),
+        permission: `${NS}.viewPeople`,
+        allowGuest: true,
+      }),
       'view'
     )
     .permission(() => ({ icon: 'fas fa-gift', label: app.translator.trans(`${NS}.admin.permissions.wish`), permission: `${NS}.wish` }), 'reply')
@@ -25,7 +30,11 @@ export default [
     .customSetting(() => (data().syllabus ? <h3 className="FanfareAdmin-heading">{t('courses_heading')}</h3> : null), 80)
     .customSetting(() => (data().syllabus ? <p className="helpText">{t('courses_help')}</p> : null), 79)
     .setting(() => (data().syllabus ? { setting: `${NS}.courses`, type: 'boolean', label: t('courses') } : null), 78)
-    .setting(() => (data().syllabus ? { setting: `${NS}.courses_public`, type: 'boolean', label: t('courses_public'), help: t('courses_public_help') } : null), 77)
+    .setting(
+      () =>
+        data().syllabus ? { setting: `${NS}.courses_public`, type: 'boolean', label: t('courses_public'), help: t('courses_public_help') } : null,
+      77
+    )
     .customSetting(() => (data().syllabus ? <CoursePreview /> : null), 76)
     .customSetting(() => <h3 className="FanfareAdmin-heading">{t('effects_heading')}</h3>, 70)
     .customSetting(() => <p className="helpText">{t('effects_help')}</p>, 69)

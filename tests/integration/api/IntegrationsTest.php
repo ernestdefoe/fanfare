@@ -149,7 +149,8 @@ class IntegrationsTest extends TestCase
         $this->assertSame(422, $wish(4, $id)->getStatusCode(), 'someone else\'s completion');
 
         $alert = $this->database()->table('notifications')->where('type', 'fanfareWish')->where('user_id', 3)->first();
-        $this->assertSame(['to' => 3, 'kind' => 'course', 'year' => (int) date('Y'), 'ref' => $id, 'title' => 'Intro to Pottery'], json_decode($alert->data, true));
+        // assertEquals: MySQL's JSON type stores the keys in its own order.
+        $this->assertEquals(['to' => 3, 'kind' => 'course', 'year' => (int) date('Y'), 'ref' => $id, 'title' => 'Intro to Pottery'], json_decode($alert->data, true));
         $this->assertContains('course:'.$id, $this->payload(2)['wished']);
 
         $own = $this->send($this->request('POST', '/api/fanfare/wishes', ['authenticatedAs' => 3, 'json' => ['userId' => 3, 'kind' => 'course', 'achievementId' => $id]]));
