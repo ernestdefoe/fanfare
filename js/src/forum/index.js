@@ -20,7 +20,7 @@ export { default as extend } from './extend';
  * only on such a day).
  */
 
-const state = { open: false, countdown: null };
+const state = { open: false, countdown: null, toast: null };
 
 app.initializers.add('ernestdefoe-fanfare', () => {
   extend('flarum/forum/components/SettingsPage', 'settingsItems', settingsItems);
@@ -161,7 +161,11 @@ function host() {
       (user ? user.preferences()?.fanfareEffects !== false : local.get('fanfareEffects') !== '0') &&
       !document.documentElement.classList.contains('Festoon-off'),
     festoonFalling: () => !!document.querySelector('.Festoon-fall'),
-    alert: (message) => app.alerts.show({ type: 'success' }, message),
+    // One sound toast at a time: a new one replaces the last, so toggling doesn't stack them.
+    alert: (message) => {
+      if (state.toast) app.alerts.dismiss(state.toast);
+      state.toast = app.alerts.show({ type: 'success' }, message);
+    },
     onOpen: () => {
       state.open = true;
       m.redraw();
