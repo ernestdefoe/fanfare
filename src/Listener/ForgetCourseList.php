@@ -18,7 +18,13 @@ class ForgetCourseList
 
     public function handle(Saving $event): void
     {
-        if ($event->user->isDirty(['preferences', 'suspended_until', 'is_email_confirmed'])) {
+        $user = $event->user;
+        // Preferences are one column: only Syllabus's show-my-courses choice matters here
+        // (not, say, Fanfare's own daily "seen" mark).
+        $shown = fn (mixed $prefs) => (is_array($prefs) ? $prefs : (json_decode((string) $prefs, true) ?: []))['syllabusShowCourses'] ?? true;
+
+        if ($user->isDirty(['suspended_until', 'is_email_confirmed'])
+            || ($user->isDirty('preferences') && $shown($user->getOriginal('preferences')) !== $shown($user->getAttribute('preferences')))) {
             $this->courses->forget();
         }
     }

@@ -142,6 +142,20 @@ class FanfareTest extends TestCase
     }
 
     #[Test]
+    public function wishing_needs_both_the_wish_and_the_see_people_permission()
+    {
+        $wish = fn () => $this->send($this->request('POST', '/api/fanfare-wishes', ['authenticatedAs' => 2, 'json' => ['data' => ['type' => 'fanfare-wishes', 'attributes' => ['userId' => 3, 'kind' => 'birthday']]]]));
+
+        $this->database()->table('group_permission')->where('permission', 'ernestdefoe-fanfare.wish')->delete();
+        $this->assertSame(403, $wish()->getStatusCode(), 'no wish permission');
+
+        $this->database()->table('group_permission')->insert(['group_id' => 3, 'permission' => 'ernestdefoe-fanfare.wish']);
+        $this->database()->table('group_permission')->where('permission', 'ernestdefoe-fanfare.viewPeople')->delete();
+        $this->assertSame(403, $wish()->getStatusCode(), 'can wish but not see today\'s people');
+        $this->assertSame(0, $this->database()->table('fanfare_wishes')->count());
+    }
+
+    #[Test]
     public function you_cannot_wish_someone_whose_day_it_is_not_or_who_hides_it()
     {
         foreach ([[6, 'birthday'], [4, 'birthday'], [2, 'birthday'], [3, 'anniversary'], [3, 'nonsense'], [8, 'anniversary'], [9, 'birthday']] as [$to, $kind]) {

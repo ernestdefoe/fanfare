@@ -2,6 +2,9 @@
 
 namespace ErnestDefoe\Fanfare\Gdpr;
 
+use ErnestDefoe\Fanfare\Achievement;
+use ErnestDefoe\Fanfare\Birthday;
+use ErnestDefoe\Fanfare\Wish;
 use Flarum\Gdpr\Data\Type;
 
 /**
@@ -27,15 +30,14 @@ class FanfareData extends Type
 
     public function export(): ?array
     {
-        $db = $this->user->getConnection();
         $id = $this->user->id;
 
         return [[
-            'fanfare/birthday.json' => $this->encodeForExport($db->table('fanfare_birthdays')->where('user_id', $id)->get(['md', 'year', 'visibility'])->toArray()),
-            'fanfare/celebrated.json' => $this->encodeForExport($db->table('fanfare_achievements')->where('user_id', $id)->get(['kind', 'title', 'created_at'])->toArray()),
+            'fanfare/birthday.json' => $this->encodeForExport(Birthday::query()->where('user_id', $id)->get(['md', 'year', 'visibility'])->toArray()),
+            'fanfare/celebrated.json' => $this->encodeForExport(Achievement::query()->where('user_id', $id)->get(['kind', 'title', 'created_at'])->toArray()),
             'fanfare/wishes.json' => $this->encodeForExport([
-                'sent' => $db->table('fanfare_wishes')->where('from_user_id', $id)->get(['kind', 'year', 'created_at'])->toArray(),
-                'received' => $db->table('fanfare_wishes')->where('to_user_id', $id)->get(['kind', 'year', 'created_at'])->toArray(),
+                'sent' => Wish::query()->where('from_user_id', $id)->get(['kind', 'year', 'created_at'])->toArray(),
+                'received' => Wish::query()->where('to_user_id', $id)->get(['kind', 'year', 'created_at'])->toArray(),
             ]),
         ]];
     }
@@ -47,11 +49,10 @@ class FanfareData extends Type
 
     public function delete(): void
     {
-        $db = $this->user->getConnection();
         $id = $this->user->id;
 
-        $db->table('fanfare_birthdays')->where('user_id', $id)->delete();
-        $db->table('fanfare_achievements')->where('user_id', $id)->delete();
-        $db->table('fanfare_wishes')->where('from_user_id', $id)->orWhere('to_user_id', $id)->delete();
+        Birthday::query()->where('user_id', $id)->delete();
+        Achievement::query()->where('user_id', $id)->delete();
+        Wish::query()->where('from_user_id', $id)->orWhere('to_user_id', $id)->delete();
     }
 }

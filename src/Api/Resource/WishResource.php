@@ -52,10 +52,11 @@ class WishResource extends AbstractDatabaseResource
     public function endpoints(): array
     {
         return [
+            // One ability per endpoint (a second can() replaces the first): seeing
+            // today's people is checked in create().
             Endpoint\Create::make()
                 ->authenticated()
-                ->can('ernestdefoe-fanfare.wish')
-                ->can('ernestdefoe-fanfare.viewPeople'),
+                ->can('ernestdefoe-fanfare.wish'),
         ];
     }
 
@@ -83,6 +84,7 @@ class WishResource extends AbstractDatabaseResource
     public function create(object $model, OriginalContext $context): object
     {
         $actor = $context->getActor();
+        $actor->assertCan('ernestdefoe-fanfare.viewPeople');
         $to = User::query()->find($model->to_user_id);
         [$year, $achievement] = $to && $to->id !== $actor->id ? $this->celebrated($to, $model->kind, (int) $model->ref_id, $actor) : [null, null];
 

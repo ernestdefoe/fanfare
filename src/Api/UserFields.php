@@ -6,6 +6,7 @@ use ErnestDefoe\Fanfare\Birthday;
 use ErnestDefoe\Fanfare\Config;
 use ErnestDefoe\Fanfare\People;
 use Flarum\Api\Context;
+use Flarum\Api\Resource\UserResource;
 use Flarum\Api\Schema;
 use Flarum\User\User;
 
@@ -27,8 +28,11 @@ class UserFields
     /** @return list<Schema\Attribute> */
     public function __invoke(): array
     {
+        // The member themselves, and moderators who can edit them on the users endpoints
+        // (where the row is eager-loaded): never on users included in other lists.
         $mine = fn (User $user, Context $context) => ! $this->config->datlechin()
-            && ($context->getActor()->id === $user->id || $context->getActor()->can('edit', $user));
+            && ($context->getActor()->id === $user->id
+                || ($context->collection instanceof UserResource && $context->getActor()->can('edit', $user)));
         $read = fn (string $column) => fn (User $user) => $user->fanfareBirthday->{$column} ?? ($column === 'visibility' ? Birthday::DAY : null);
 
         return [
@@ -82,9 +86,13 @@ class UserFields
         $row->{$column} = $value;
 
         if ($first) {
+            // An upsert: two first saves at once for the same member don't collide on the key.
             $user->afterSave(function (User $user) use ($row) {
-                $row->user_id = $user->id;
-                $row->save();
+                Birthday::query()->upsert(
+                    [['user_id' => $user->id, 'md' => $row->md, 'year' => $row->year, 'visibility' => $row->visibility]],
+                    ['user_id'],
+                    ['md', 'year', 'visibility'],
+                );
                 $this->people->forget();
             });
         }
