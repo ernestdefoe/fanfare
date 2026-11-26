@@ -24,7 +24,9 @@ export class WishNotification extends Notification {
   content() {
     const n = this.attrs.notification;
     const data: FanfareContent = n.content() || {};
-    const username = (n.fromUser() as User | null | undefined)?.displayName();
+    // fromUser() is false, not null, when the sender is gone (a deleted member).
+    const from = n.fromUser();
+    const username = from ? (from as User).displayName() : '';
     if (data.kind === 'course') return t('notifications.wish_course', { username, course: data.title || '' });
     return t('notifications.wish_' + (data.kind === 'anniversary' ? 'anniversary' : 'birthday'), { username });
   }
