@@ -26,12 +26,17 @@ export function frame(fx: FxState, t: number) {
   const t0 = performance.now();
   fx.ctx.clearRect(0, 0, fx.W, fx.H);
   feed(fx, dt);
-  fx.parts = fx.parts.filter((p) => {
+  // A particle may add others while it moves (a rocket bursts into sparks): they land in
+  // the fresh array and join the survivors, instead of being lost to the filter.
+  const current = fx.parts;
+  fx.parts = [];
+  const kept = current.filter((p) => {
     const b = kind(p);
     const keep = b.update(p, dt, fx);
     if (keep) b.draw(p, fx);
     return keep;
   });
+  fx.parts = kept.concat(fx.parts);
   if (fx.parts.length > fx.cap * 2) fx.parts.splice(0, fx.parts.length - fx.cap * 2);
   guard(fx, t0);
   if (fx.parts.length || fx.ambient) fx.raf = requestAnimationFrame(fx.tick);
