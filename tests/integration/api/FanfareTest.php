@@ -33,13 +33,21 @@ class FanfareTest extends TestCase
         $this->prepareDatabase([
             User::class => [
                 $this->normalUser(),
-                ['id' => 3, 'username' => 'mira', 'email' => 'mira@machine.local', 'is_email_confirmed' => 1, 'joined_at' => '2020-01-01', 'fanfare_birthday' => $this->md, 'fanfare_birth_year' => 1995, 'fanfare_birthday_visibility' => 2],
-                ['id' => 4, 'username' => 'quiet', 'email' => 'quiet@machine.local', 'is_email_confirmed' => 1, 'joined_at' => '2020-01-01', 'fanfare_birthday' => $this->md, 'fanfare_birthday_visibility' => 0],
+                ['id' => 3, 'username' => 'mira', 'email' => 'mira@machine.local', 'is_email_confirmed' => 1, 'joined_at' => '2020-01-01'],
+                ['id' => 4, 'username' => 'quiet', 'email' => 'quiet@machine.local', 'is_email_confirmed' => 1, 'joined_at' => '2020-01-01'],
                 ['id' => 5, 'username' => 'tobi', 'email' => 'tobi@machine.local', 'is_email_confirmed' => 1, 'joined_at' => $joined],
-                ['id' => 7, 'username' => 'nora', 'email' => 'nora@machine.local', 'is_email_confirmed' => 1, 'joined_at' => '2020-01-01', 'fanfare_birthday' => $this->md, 'fanfare_birthday_visibility' => 1],
-                ['id' => 8, 'username' => 'hermit', 'email' => 'hermit@machine.local', 'is_email_confirmed' => 1, 'joined_at' => $joined, 'fanfare_birthday_visibility' => 0],
-                ['id' => 9, 'username' => 'unconfirmed', 'email' => 'unconfirmed@machine.local', 'is_email_confirmed' => 0, 'joined_at' => '2020-01-01', 'fanfare_birthday' => $this->md, 'fanfare_birthday_visibility' => 1],
-                ['id' => 6, 'username' => 'later', 'email' => 'later@machine.local', 'is_email_confirmed' => 1, 'joined_at' => '2020-01-01', 'fanfare_birthday' => $other, 'fanfare_birthday_visibility' => 1],
+                ['id' => 7, 'username' => 'nora', 'email' => 'nora@machine.local', 'is_email_confirmed' => 1, 'joined_at' => '2020-01-01'],
+                ['id' => 8, 'username' => 'hermit', 'email' => 'hermit@machine.local', 'is_email_confirmed' => 1, 'joined_at' => $joined],
+                ['id' => 9, 'username' => 'unconfirmed', 'email' => 'unconfirmed@machine.local', 'is_email_confirmed' => 0, 'joined_at' => '2020-01-01'],
+                ['id' => 6, 'username' => 'later', 'email' => 'later@machine.local', 'is_email_confirmed' => 1, 'joined_at' => '2020-01-01'],
+            ],
+            'fanfare_birthdays' => [
+                ['user_id' => 3, 'md' => $this->md, 'year' => 1995, 'visibility' => 2],
+                ['user_id' => 4, 'md' => $this->md, 'visibility' => 0],
+                ['user_id' => 7, 'md' => $this->md, 'visibility' => 1],
+                ['user_id' => 8, 'visibility' => 0],
+                ['user_id' => 9, 'md' => $this->md, 'visibility' => 1],
+                ['user_id' => 6, 'md' => $other, 'visibility' => 1],
             ],
             'group_user' => array_map(fn ($id) => ['user_id' => $id, 'group_id' => 3], [3, 4, 5, 6, 7, 8, 9]),
         ]);
@@ -117,15 +125,15 @@ class FanfareTest extends TestCase
     #[Test]
     public function wishing_once_notifies_and_twice_does_not()
     {
-        $wish = fn () => $this->send($this->request('POST', '/api/fanfare/wishes', ['authenticatedAs' => 2, 'json' => ['userId' => 3, 'kind' => 'birthday']]));
+        $wish = fn () => $this->send($this->request('POST', '/api/fanfare-wishes', ['authenticatedAs' => 2, 'json' => ['data' => ['type' => 'fanfare-wishes', 'attributes' => ['userId' => 3, 'kind' => 'birthday']]]]));
 
         $this->assertSame(201, $wish()->getStatusCode());
-        $this->assertSame(200, $wish()->getStatusCode());
+        $this->assertSame(201, $wish()->getStatusCode(), 'a second wish answers like the first');
         $this->assertSame(1, $this->database()->table('fanfare_wishes')->count());
         $this->assertSame(1, $this->database()->table('notifications')->where('type', 'fanfareWish')->where('user_id', 3)->count());
 
         // A second person wished: both keep their alert.
-        $this->assertSame(201, $this->send($this->request('POST', '/api/fanfare/wishes', ['authenticatedAs' => 2, 'json' => ['userId' => 7, 'kind' => 'birthday']]))->getStatusCode());
+        $this->assertSame(201, $this->send($this->request('POST', '/api/fanfare-wishes', ['authenticatedAs' => 2, 'json' => ['data' => ['type' => 'fanfare-wishes', 'attributes' => ['userId' => 7, 'kind' => 'birthday']]]]))->getStatusCode());
         foreach ([3, 7] as $to) {
             $this->assertSame(1, $this->database()->table('notifications')->where('type', 'fanfareWish')->where('user_id', $to)->where('is_deleted', false)->count(), "alert for $to");
         }
@@ -137,11 +145,11 @@ class FanfareTest extends TestCase
     public function you_cannot_wish_someone_whose_day_it_is_not_or_who_hides_it()
     {
         foreach ([[6, 'birthday'], [4, 'birthday'], [2, 'birthday'], [3, 'anniversary'], [3, 'nonsense'], [8, 'anniversary'], [9, 'birthday']] as [$to, $kind]) {
-            $response = $this->send($this->request('POST', '/api/fanfare/wishes', ['authenticatedAs' => 2, 'json' => ['userId' => $to, 'kind' => $kind]]));
+            $response = $this->send($this->request('POST', '/api/fanfare-wishes', ['authenticatedAs' => 2, 'json' => ['data' => ['type' => 'fanfare-wishes', 'attributes' => ['userId' => $to, 'kind' => $kind]]]]));
             $this->assertSame(422, $response->getStatusCode(), "$to $kind");
         }
 
-        $this->assertContains($this->send($this->request('POST', '/api/fanfare/wishes', ['json' => ['userId' => 3, 'kind' => 'birthday']]))->getStatusCode(), [400, 401]);
+        $this->assertContains($this->send($this->request('POST', '/api/fanfare-wishes', ['json' => ['data' => ['type' => 'fanfare-wishes', 'attributes' => ['userId' => 3, 'kind' => 'birthday']]]]))->getStatusCode(), [400, 401]);
     }
 
     #[Test]
@@ -155,7 +163,7 @@ class FanfareTest extends TestCase
         $this->assertSame(422, $patch('13-01')->getStatusCode());
         $this->assertSame(422, $patch('02-30')->getStatusCode());
         $this->assertSame(200, $patch('02-29')->getStatusCode());
-        $this->assertSame('02-29', User::find(2)->fanfare_birthday);
+        $this->assertSame('02-29', $this->database()->table('fanfare_birthdays')->where('user_id', 2)->value('md'));
 
         $seen = json_decode($this->send($this->request('GET', '/api/users/3', ['authenticatedAs' => 2]))->getBody()->getContents(), true);
         $this->assertArrayNotHasKey('fanfareBirthday', $seen['data']['attributes']);
@@ -164,7 +172,8 @@ class FanfareTest extends TestCase
     #[Test]
     public function a_normal_day_adds_nothing_and_costs_nothing_extra()
     {
-        $this->database()->table('users')->update(['fanfare_birthday' => null, 'joined_at' => (new DateTimeImmutable('today'))->modify('-40 days')->format('Y-m-d')]);
+        $this->database()->table('fanfare_birthdays')->delete();
+        $this->database()->table('users')->update(['joined_at' => (new DateTimeImmutable('today'))->modify('-40 days')->format('Y-m-d')]);
 
         $this->assertNull($this->payload(2));
     }

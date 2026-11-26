@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Fanfare\Console;
 
+use ErnestDefoe\Fanfare\Birthday;
 use ErnestDefoe\Fanfare\Config;
 use ErnestDefoe\Fanfare\Notification\DayBlueprint;
 use ErnestDefoe\Fanfare\People;
@@ -38,7 +39,7 @@ class GreetCommand extends Command
         $sent = 0;
 
         if (! $config->datlechin()) {
-            $people->listable(User::query())->whereIn('fanfare_birthday', $mds)
+            $people->listable(User::query())->whereIn('users.id', Birthday::query()->whereIn('md', $mds)->select('user_id'))
                 ->chunkById(200, function ($users) use ($notifications, $year, &$sent) {
                     foreach ($users as $user) {
                         $notifications->sync(new DayBlueprint($user, 'birthday', $year), [$user]);

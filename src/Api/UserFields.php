@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Fanfare\Api;
 
+use ErnestDefoe\Fanfare\Birthday;
 use ErnestDefoe\Fanfare\Config;
 use ErnestDefoe\Fanfare\People;
 use Flarum\Api\Context;
@@ -14,7 +15,8 @@ use Flarum\User\User;
  * badges come from the day's list, which already applies the member's choice.
  *
  * With datlechin/flarum-birthdays installed its fields are used instead and
- * these stay hidden.
+ * these stay hidden. The values live in fanfare_birthdays (the user's
+ * fanfareBirthday relation), saved once after the user is.
  */
 class UserFields
 {
@@ -27,11 +29,11 @@ class UserFields
     {
         $mine = fn (User $user, Context $context) => ! $this->config->datlechin()
             && ($context->getActor()->id === $user->id || $context->getActor()->can('edit', $user));
-        $forget = fn (User $user) => $user->afterSave(fn () => $this->people->forget());
+        $read = fn (string $column) => fn (User $user) => $user->fanfareBirthday->{$column} ?? ($column === 'visibility' ? Birthday::DAY : null);
 
         return [
             Schema\Str::make('fanfareBirthday')
-                ->property('fanfare_birthday')
+                ->get($read('md'))
                 ->nullable()
                 ->visible($mine)
                 ->writable($mine)
@@ -41,33 +43,50 @@ class UserFields
                         $fail('validation.date');
                     }
                 })
-                ->set(function (User $user, ?string $value) use ($forget) {
-                    $user->setAttribute('fanfare_birthday', $value);
-                    $forget($user);
-                }),
+                ->set(fn (User $user, ?string $value) => $this->stage($user, 'md', $value)),
 
             Schema\Integer::make('fanfareBirthYear')
-                ->property('fanfare_birth_year')
+                ->get($read('year'))
                 ->nullable()
                 ->visible($mine)
                 ->writable($mine)
                 ->min(1900)
                 ->max((int) date('Y'))
-                ->set(function (User $user, ?int $value) use ($forget) {
-                    $user->setAttribute('fanfare_birth_year', $value);
-                    $forget($user);
-                }),
+                ->set(fn (User $user, ?int $value) => $this->stage($user, 'year', $value)),
 
             Schema\Integer::make('fanfareBirthdayVisibility')
-                ->property('fanfare_birthday_visibility')
+                ->get($read('visibility'))
                 ->visible($mine)
                 ->writable($mine)
                 ->min(0)
                 ->max(2)
-                ->set(function (User $user, int $value) use ($forget) {
-                    $user->setAttribute('fanfare_birthday_visibility', $value);
-                    $forget($user);
-                }),
+                ->set(fn (User $user, int $value) => $this->stage($user, 'visibility', $value)),
         ];
+    }
+
+    /**
+     * Change one birthday field on the user's row (made if it isn't there yet),
+     * and save the row once, after the user, however many fields changed.
+     */
+    protected function stage(User $user, string $column, mixed $value): void
+    {
+        $row = $user->fanfareBirthday;
+        $first = ! $row || ! $row->isDirty();
+
+        if (! $row) {
+            $row = new Birthday();
+            $row->visibility = Birthday::DAY;
+            $user->setRelation('fanfareBirthday', $row);
+        }
+
+        $row->{$column} = $value;
+
+        if ($first) {
+            $user->afterSave(function (User $user) use ($row) {
+                $row->user_id = $user->id;
+                $row->save();
+                $this->people->forget();
+            });
+        }
     }
 }

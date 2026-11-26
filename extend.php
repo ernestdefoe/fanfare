@@ -10,23 +10,27 @@
  * centrepieces are one script added only on a day with a moment.
  */
 
-use ErnestDefoe\Fanfare\Api\CreateWishController;
 use ErnestDefoe\Fanfare\Api\ForumFields;
+use ErnestDefoe\Fanfare\Api\Resource\WishResource;
+use ErnestDefoe\Fanfare\Birthday;
 use ErnestDefoe\Fanfare\Api\UserFields;
 use ErnestDefoe\Fanfare\Console\GreetCommand;
 use ErnestDefoe\Fanfare\Content\AdminPayload;
 use ErnestDefoe\Fanfare\Content\Inject;
 use ErnestDefoe\Fanfare\Extend\With;
+use ErnestDefoe\Fanfare\Gdpr\FanfareData;
 use ErnestDefoe\Fanfare\Listener\ForgetCourseList;
 use ErnestDefoe\Fanfare\Listener\RecordCourseCompletion;
 use ErnestDefoe\Fanfare\Notification\DayBlueprint;
 use ErnestDefoe\Fanfare\Notification\WishBlueprint;
 use ErnestDefoe\Fanfare\Provider;
+use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\ForumResource;
 use Flarum\Api\Resource\UserResource;
 use Flarum\Extend;
 use Flarum\Gdpr\Extend\UserData;
 use Flarum\User\Event\Saving;
+use Flarum\User\User;
 use Illuminate\Console\Scheduling\Event;
 
 return [
@@ -42,11 +46,15 @@ return [
 
     new Extend\Locales(__DIR__.'/locale'),
 
-    (new Extend\Routes('api'))
-        ->post('/fanfare/wishes', 'fanfare.wishes.create', CreateWishController::class),
+    new Extend\ApiResource(WishResource::class),
 
     (new Extend\ApiResource(UserResource::class))
-        ->fields(UserFields::class),
+        ->fields(UserFields::class)
+        // The birthday fields read the fanfare_birthdays row: one query per list, not per member.
+        ->endpoint(['index', 'show'], fn (Endpoint\Index|Endpoint\Show $endpoint) => $endpoint->eagerLoad('fanfareBirthday')),
+
+    (new Extend\Model(User::class))
+        ->hasOne('fanfareBirthday', Birthday::class, 'user_id'),
 
     (new Extend\ApiResource(ForumResource::class))
         ->fields(ForumFields::class),
@@ -94,6 +102,6 @@ return [
         ->whenExtensionEnabled('datlechin-birthdays', fn () => [new With('datlechin')])
         ->whenExtensionEnabled('flarum-suspend', fn () => [new With('suspend')])
         ->whenExtensionEnabled('flarum-gdpr', fn () => [
-            (new UserData())->addPiiKeysForSerialization(['fanfare_birthday', 'fanfare_birth_year']),
+            (new UserData())->addType(FanfareData::class),
         ]),
 ];

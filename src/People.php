@@ -26,6 +26,9 @@ class People
     /** How many of each kind the widget lists by name; the rest are a count. */
     public const LIST = 24;
 
+    /** How many of the day's birthdays are kept in memory for members' own greetings. */
+    public const OWN = 5000;
+
     public function __construct(protected Config $config, protected Repository $cache, protected SlugManager $slugs)
     {
     }
@@ -45,6 +48,28 @@ class People
     {
         $today ??= $this->config->today();
         $this->cache->forget('ernestdefoe-fanfare.people.'.$today->format('Y-m-d').'.'.$this->config->hash());
+        $this->cache->forget('ernestdefoe-fanfare.own.'.$today->format('Y-m-d').'.'.$this->config->hash());
+    }
+
+    /**
+     * Who has a birthday around today, whatever they chose to show: so a member's
+     * own greeting costs no query. Never sent to the page. Null when there are
+     * too many to keep (then each member is looked up on their own).
+     *
+     * @return list<int>|null
+     */
+    protected function birthdayIds(DateTimeImmutable $today): ?array
+    {
+        $key = 'ernestdefoe-fanfare.own.'.$today->format('Y-m-d').'.'.$this->config->hash();
+
+        $ids = $this->cache->remember($key, 900, function () use ($today) {
+            $ids = Birthday::query()->whereIn('md', self::window($today))->limit(self::OWN + 1)->pluck('user_id')->map(fn ($id) => (int) $id)->all();
+
+            // false, not null: the cache treats a stored null as a miss.
+            return count($ids) > self::OWN ? false : $ids;
+        });
+
+        return $ids === false ? null : $ids;
     }
 
     /**
@@ -110,9 +135,7 @@ class People
             return true;
         }
 
-        $v = $user->getAttribute('fanfare_birthday_visibility');
-
-        return $v === null || (int) $v > 0;
+        return ($user->fanfareBirthday->visibility ?? Birthday::DAY) > Birthday::HIDDEN;
     }
 
     /**
@@ -157,12 +180,19 @@ class People
     {
         $today ??= $this->config->today();
         $mds = self::window($today);
-        $md = $this->birthdayOf($actor);
         $years = null;
 
         if ($actor->joined_at instanceof DateTimeInterface && in_array($actor->joined_at->format('m-d'), $mds, true)) {
             $years = $this->yearsAt($actor->joined_at, $today);
         }
+
+        // Fanfare's own field: from the day's cached ids, so most pages ask nothing.
+        $ids = $this->config->datlechin() ? null : $this->birthdayIds($today);
+        if ($ids !== null) {
+            return ['birthday' => in_array($actor->id, $ids, true), 'years' => $years];
+        }
+
+        $md = $this->birthdayOf($actor);
 
         return ['birthday' => $md !== null && in_array($md, $mds, true), 'years' => $years];
     }
@@ -175,7 +205,7 @@ class People
             return $b ? Carbon::parse($b)->format('m-d') : null;
         }
 
-        $md = $user->getAttribute('fanfare_birthday');
+        $md = $user->fanfareBirthday->md ?? null;
 
         return is_string($md) && preg_match('/^\d{2}-\d{2}$/', $md) ? $md : null;
     }
@@ -252,13 +282,15 @@ class People
                 return ['id' => (int) $u->id, 'md' => $born->format('m-d'), 'age' => $u->getAttribute('show_age') ? $this->age((int) $born->format('Y'), $born->format('m-d'), $today) : null];
             }, $rows[0]);
         } else {
-            $query->where('fanfare_birthday_visibility', '>', 0)->whereIn('fanfare_birthday', $mds);
-            $rows = $this->take($query, ['id', 'fanfare_birthday', 'fanfare_birth_year', 'fanfare_birthday_visibility']);
+            $query->join('fanfare_birthdays', 'fanfare_birthdays.user_id', '=', 'users.id')
+                ->where('fanfare_birthdays.visibility', '>', Birthday::HIDDEN)
+                ->whereIn('fanfare_birthdays.md', $mds);
+            $rows = $this->take($query, ['users.id', 'fanfare_birthdays.md', 'fanfare_birthdays.year', 'fanfare_birthdays.visibility']);
             $list = array_map(fn (User $u) => [
                 'id' => (int) $u->id,
-                'md' => (string) $u->getAttribute('fanfare_birthday'),
-                'age' => (int) $u->getAttribute('fanfare_birthday_visibility') === 2 && $u->getAttribute('fanfare_birth_year')
-                    ? $this->age((int) $u->getAttribute('fanfare_birth_year'), (string) $u->getAttribute('fanfare_birthday'), $today)
+                'md' => (string) $u->getAttribute('md'),
+                'age' => (int) $u->getAttribute('visibility') === Birthday::DAY_AND_AGE && $u->getAttribute('year')
+                    ? $this->age((int) $u->getAttribute('year'), (string) $u->getAttribute('md'), $today)
                     : null,
             ], $rows[0]);
         }
@@ -277,7 +309,8 @@ class People
         $query->whereIn(self::monthDay($query->getQuery(), 'users.joined_at'), $mds);
 
         if (! $this->config->datlechin()) {
-            $query->where(fn (Builder $q) => $q->whereNull('fanfare_birthday_visibility')->orWhere('fanfare_birthday_visibility', '>', 0));
+            // "Nobody" on their birthday hides the join anniversary too.
+            $query->whereNotIn('users.id', Birthday::query()->where('visibility', Birthday::HIDDEN)->select('user_id'));
         }
 
         [$rows, $more] = $this->take($query, ['id', 'joined_at']);
@@ -302,7 +335,7 @@ class People
      */
     protected function take(Builder $query, array $columns): array
     {
-        $rows = (clone $query)->orderBy('id')->limit(self::LIST + 1)->get($columns)->all();
+        $rows = (clone $query)->orderBy('users.id')->limit(self::LIST + 1)->get($columns)->all();
         $more = count($rows) > self::LIST ? (clone $query)->count() - self::LIST : 0;
 
         return [array_slice($rows, 0, self::LIST), $more];

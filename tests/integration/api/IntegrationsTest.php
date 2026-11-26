@@ -151,10 +151,10 @@ class IntegrationsTest extends TestCase
     {
         $this->complete(3, 1);
         $id = (int) $this->database()->table('fanfare_achievements')->value('id');
-        $wish = fn (int $to, int $ref) => $this->send($this->request('POST', '/api/fanfare/wishes', ['authenticatedAs' => 2, 'json' => ['userId' => $to, 'kind' => 'course', 'achievementId' => $ref]]));
+        $wish = fn (int $to, int $ref) => $this->send($this->request('POST', '/api/fanfare-wishes', ['authenticatedAs' => 2, 'json' => ['data' => ['type' => 'fanfare-wishes', 'attributes' => ['userId' => $to, 'kind' => 'course', 'achievementId' => $ref]]]]));
 
         $this->assertSame(201, $wish(3, $id)->getStatusCode());
-        $this->assertSame(200, $wish(3, $id)->getStatusCode());
+        $this->assertSame(201, $wish(3, $id)->getStatusCode(), 'a second congratulation answers like the first');
         $this->assertSame(422, $wish(3, $id + 1)->getStatusCode(), 'a completion that is not there');
         $this->assertSame(422, $wish(4, $id)->getStatusCode(), 'someone else\'s completion');
 
@@ -163,7 +163,7 @@ class IntegrationsTest extends TestCase
         $this->assertEquals(['to' => 3, 'kind' => 'course', 'year' => (int) date('Y'), 'ref' => $id, 'title' => 'Intro to Pottery'], json_decode($alert->data, true));
         $this->assertContains('course:'.$id, $this->payload(2)['wished']);
 
-        $own = $this->send($this->request('POST', '/api/fanfare/wishes', ['authenticatedAs' => 3, 'json' => ['userId' => 3, 'kind' => 'course', 'achievementId' => $id]]));
+        $own = $this->send($this->request('POST', '/api/fanfare-wishes', ['authenticatedAs' => 3, 'json' => ['data' => ['type' => 'fanfare-wishes', 'attributes' => ['userId' => 3, 'kind' => 'course', 'achievementId' => $id]]]]));
         $this->assertSame(422, $own->getStatusCode());
     }
 
