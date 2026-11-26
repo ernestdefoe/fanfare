@@ -1,10 +1,19 @@
 import app from 'flarum/admin/app';
+import m from 'mithril';
 import Extend from 'flarum/common/extenders';
-import Occasions from './Occasions';
+import type Mithril from 'mithril';
+import type AdminPage from 'flarum/admin/components/AdminPage';
+import Occasions, { type OccasionsData } from './Occasions';
 
 const NS = 'ernestdefoe-fanfare';
-const t = (key, params) => app.translator.trans(`${NS}.admin.settings.${key}`, params);
-const data = () => app.data.fanfareAdmin || {};
+const t = (key: string, params: Record<string, unknown> = {}) => app.translator.trans(`${NS}.admin.settings.${key}`, params);
+/** What the server tells the settings page: the catalogue, Festoon's days, Syllabus and the timezone. */
+export interface FanfareAdminData extends OccasionsData {
+  datlechin?: boolean;
+  syllabus?: boolean;
+}
+
+const data = (): FanfareAdminData => (app.data.fanfareAdmin as FanfareAdminData | undefined) || {};
 
 export default [
   new Extend.Admin()
@@ -19,7 +28,7 @@ export default [
     )
     .permission(() => ({ icon: 'fas fa-gift', label: app.translator.trans(`${NS}.admin.permissions.wish`), permission: `${NS}.wish` }), 'reply')
     // Called with the settings page as `this`, which owns the setting streams.
-    .customSetting(function () {
+    .customSetting(function (this: AdminPage) {
       return <Occasions setting={this.setting(`${NS}.occasions`)} data={data()} />;
     }, 100)
     .customSetting(() => <h3 className="FanfareAdmin-heading">{t('people_heading')}</h3>, 90)
@@ -35,7 +44,7 @@ export default [
         data().syllabus ? { setting: `${NS}.courses_public`, type: 'boolean', label: t('courses_public'), help: t('courses_public_help') } : null,
       77
     )
-    .customSetting(() => (data().syllabus ? <CoursePreview /> : null), 76)
+    .customSetting(() => (data().syllabus ? m(CoursePreview) : null), 76)
     .customSetting(() => <h3 className="FanfareAdmin-heading">{t('effects_heading')}</h3>, 70)
     .customSetting(() => <p className="helpText">{t('effects_help')}</p>, 69)
     .setting(
@@ -53,7 +62,7 @@ export default [
     .setting(() => ({ setting: `${NS}.timezone`, type: 'text', label: t('timezone'), help: t('timezone_help'), placeholder: data().timezone }), 64),
 ];
 
-function CoursePreview() {
+function CoursePreview(): Mithril.Component {
   return {
     view: () => (
       <p className="FanfareOccasions-people">

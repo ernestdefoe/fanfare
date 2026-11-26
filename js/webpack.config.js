@@ -10,7 +10,10 @@ module.exports = (...args) => {
   let base = config();
   if (typeof base === 'function') base = base(...args);
 
-  base.entry = { ...base.entry, stage: './stage.js' };
+  base.entry = { ...base.entry, stage: './stage.ts' };
+
+  // `import m from 'mithril'` is core's own Mithril, the global `m`: never a second copy in the bundle.
+  base.externals = [{ mithril: 'm' }, ...base.externals];
 
   return base;
 };

@@ -3,7 +3,7 @@ import { nr, DEFS } from './art';
 
 /* A course completed: a mortarboard over a rolled diploma tied with a ribbon, and a plaque */
 export function gradSVG() {
-  const sparkle = (x, y, s, d) =>
+  const sparkle = (x: number, y: number, s: number, d: number) =>
     `<path class="twk" style="animation-delay:${d}s" d="M${x} ${y - 12 * s} Q${x + 2 * s} ${y - 2 * s} ${x + 12 * s} ${y} Q${x + 2 * s} ${y + 2 * s} ${x} ${y + 12 * s} Q${x - 2 * s} ${y + 2 * s} ${x - 12 * s} ${y} Q${x - 2 * s} ${y - 2 * s} ${x} ${y - 12 * s}Z" fill="#ffe08a"/>`;
   return `<svg viewBox="0 0 600 700"><defs>${DEFS}
       <linearGradient id="ff-paper" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#efe2c4"/></linearGradient>
@@ -35,15 +35,15 @@ export function gradSVG() {
 }
 
 /* A Festoon day of the admin's own: a ribbon rosette in its two colors with its emoji at the heart */
-export function rosetteSVG(primary, secondary, emoji) {
+export function rosetteSVG(primary: string, secondary: string, emoji: string) {
   const pleats = Array.from({ length: 40 }, (_, i) => {
     const a0 = (i / 40) * 6.283,
       a1 = ((i + 1) / 40) * 6.283,
       am = (a0 + a1) / 2;
-    const p = (a, r) => `${nr(300 + Math.cos(a) * r)} ${nr(250 + Math.sin(a) * r)}`;
+    const p = (a: number, r: number) => `${nr(300 + Math.cos(a) * r)} ${nr(250 + Math.sin(a) * r)}`;
     return `<path d="M${p(a0, 150)} L${p(am, 226)} L${p(a1, 150)}Z" fill="${i % 2 ? primary : secondary}"/>`;
   }).join('');
-  const sparkle = (x, y, s, d) =>
+  const sparkle = (x: number, y: number, s: number, d: number) =>
     `<path class="twk" style="animation-delay:${d}s" d="M${x} ${y - 12 * s} Q${x + 2 * s} ${y - 2 * s} ${x + 12 * s} ${y} Q${x + 2 * s} ${y + 2 * s} ${x} ${y + 12 * s} Q${x - 2 * s} ${y + 2 * s} ${x - 12 * s} ${y} Q${x - 2 * s} ${y - 2 * s} ${x} ${y - 12 * s}Z" fill="#fff"/>`;
   return `<svg viewBox="0 0 600 700"><defs>${DEFS}
       <radialGradient id="ff-heart" cx=".42" cy=".36"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#eef1f6"/></radialGradient>

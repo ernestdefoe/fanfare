@@ -1,10 +1,24 @@
 import app from 'flarum/forum/app';
-import Component from 'flarum/common/Component';
+import m from 'mithril';
+import type Mithril from 'mithril';
+import Component, { type ComponentAttrs } from 'flarum/common/Component';
 import Link from 'flarum/common/components/Link';
 import stringToColor from 'flarum/common/utils/stringToColor';
 import { peopleToday } from '../today';
 import { t } from '../util';
 import { claim, release, hosted } from '../hosts';
+import type { AnniversaryPerson, BirthdayPerson, CourseCompletion, FanfareData, PersonUser } from '../types';
+
+export interface WidgetAttrs extends ComponentAttrs {
+  host: string;
+}
+
+type Kind = 'birthday' | 'anniversary' | 'course';
+
+/** A birthday or an anniversary today. */
+type Person = Partial<BirthdayPerson & AnniversaryPerson> & { id: number };
+
+const fanfare = () => app.data.fanfare as FanfareData;
 
 /**
  * Today's birthdays and join anniversaries, and who finished a course lately,
@@ -15,25 +29,29 @@ import { claim, release, hosted } from '../hosts';
  * visible, as under Bespoke), or a widget host the admin placed it in
  * ('bespoke', 'fof'). A placed copy makes the two fallbacks stand down.
  */
-export default class Widget extends Component {
-  oncreate(vnode) {
+export default class Widget extends Component<WidgetAttrs> {
+  wide = false;
+  busy = false;
+  scrollCue?: () => void;
+
+  oncreate(vnode: Mithril.VnodeDOM<WidgetAttrs, this>) {
     super.oncreate(vnode);
     if (!this.fallback()) claim(this.attrs.host);
     this.measure();
   }
 
-  onupdate(vnode) {
+  onupdate(vnode: Mithril.VnodeDOM<WidgetAttrs, this>) {
     super.onupdate(vnode);
     this.measure();
   }
 
-  onremove(vnode) {
+  onremove(vnode: Mithril.VnodeDOM<WidgetAttrs, this>) {
     super.onremove(vnode);
     if (!this.fallback()) release(this.attrs.host);
     if (this.scrollCue) window.removeEventListener('resize', this.scrollCue);
   }
 
-  fallback() {
+  fallback(): boolean {
     return this.attrs.host === 'sidebar' || this.attrs.host === 'strip';
   }
 
@@ -43,14 +61,14 @@ export default class Widget extends Component {
    */
   measure() {
     if (this.attrs.host !== 'strip') return;
-    const side = document.querySelector('.FanfareWidget--sidebar');
+    const side = document.querySelector<HTMLElement>('.FanfareWidget--sidebar');
     const wanted = !side || !side.offsetParent;
     if (wanted !== !!this.wide) {
       this.wide = wanted;
       m.redraw();
     }
 
-    const el = this.element;
+    const el = this.element as HTMLElement | undefined;
     if (!el) return;
     if (!this.scrollCue) {
       this.scrollCue = () => el.classList.toggle('is-more', el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
@@ -61,7 +79,7 @@ export default class Widget extends Component {
   }
 
   view() {
-    const data = app.data.fanfare;
+    const data = fanfare();
     const today = peopleToday(data);
     const strip = this.attrs.host === 'strip';
 
@@ -69,61 +87,60 @@ export default class Widget extends Component {
 
     if ((!today.birthdays.length && !today.anniversaries.length && !courses.length) || (this.fallback() && hosted())) return null;
 
-    const rows = (list, kind) =>
-      list.map((p) => {
-        const u = data.people?.users[p.id];
-        if (!u) return null;
-        const sub = kind === 'birthday' ? (p.age ? t('widget.turns', { age: p.age }) : null) : t('widget.years', { count: p.years });
-
-        return (
-          <div className="FanfareWidget-row" key={kind + p.id}>
-            <Link href={app.route('user', { username: u.slug })} className="FanfareWidget-person">
-              {avatar(u)}
-              <span className="FanfareWidget-who">
-                <span className="FanfareWidget-name">{u.name}</span>
-                {sub && !strip ? <span className="FanfareWidget-sub">{sub}</span> : null}
-              </span>
-            </Link>
-            {this.wishButton(p.id, kind, u.name)}
-          </div>
-        );
-      });
-
-    const more = (n) => (n > 0 && !strip ? <div className="FanfareWidget-more">{t('widget.more', { count: n })}</div> : null);
-
     return (
       <section
         className={'FanfareWidget FanfareWidget--' + this.attrs.host + (strip && this.wide ? ' is-wide' : '')}
         aria-label={t('widget.heading')}
       >
-        {today.birthdays.length ? (
-          <div className="FanfareWidget-group">
-            <h4 className="FanfareWidget-heading">🎂 {strip ? t('widget.today') : t('widget.heading')}</h4>
-            {rows(today.birthdays, 'birthday')}
-            {more(data.people.more.birthdays)}
-          </div>
-        ) : null}
-        {today.anniversaries.length ? (
-          <div className="FanfareWidget-group">
-            <h4 className="FanfareWidget-heading">🏅 {t('widget.anniversaries')}</h4>
-            {rows(today.anniversaries, 'anniversary')}
-            {more(data.people.more.anniversaries)}
-          </div>
-        ) : null}
-        {courses.length ? (
-          <div className="FanfareWidget-group">
-            <h4 className="FanfareWidget-heading">🎓 {t('widget.courses')}</h4>
-            {courses.map((c) => this.courseRow(c, strip))}
-            {more(data.courses.more)}
-          </div>
-        ) : null}
+        {today.birthdays.length
+          ? group(
+              '🎂',
+              strip ? t('widget.today') : t('widget.heading'),
+              this.rows(today.birthdays, 'birthday', strip),
+              more(data.people!.more.birthdays, strip)
+            )
+          : null}
+        {today.anniversaries.length
+          ? group('🏅', t('widget.anniversaries'), this.rows(today.anniversaries, 'anniversary', strip), more(data.people!.more.anniversaries, strip))
+          : null}
+        {courses.length
+          ? group(
+              '🎓',
+              t('widget.courses'),
+              courses.map((c) => this.courseRow(c, strip)),
+              more(data.courses!.more, strip)
+            )
+          : null}
       </section>
     );
   }
 
+  /** Today's birthdays or anniversaries: each person, and a wish for them. */
+  rows(list: Person[], kind: Kind, strip: boolean) {
+    const data = fanfare();
+    return list.map((p) => {
+      const u = data.people?.users[p.id];
+      if (!u) return null;
+      const sub = kind === 'birthday' ? (p.age ? t('widget.turns', { age: p.age }) : null) : t('widget.years', { count: p.years });
+
+      return (
+        <div className="FanfareWidget-row" key={kind + p.id}>
+          <Link href={app.route('user', { username: u.slug })} className="FanfareWidget-person">
+            {avatar(u)}
+            <span className="FanfareWidget-who">
+              <span className="FanfareWidget-name">{u.name}</span>
+              {sub && !strip ? <span className="FanfareWidget-sub">{sub}</span> : null}
+            </span>
+          </Link>
+          {this.wishButton(p.id, kind, u.name)}
+        </div>
+      );
+    });
+  }
+
   /** Who finished a course: the course links to its certificate's public page. */
-  courseRow(c, strip) {
-    const u = app.data.fanfare.courses.users[c.user];
+  courseRow(c: CourseCompletion, strip: boolean) {
+    const u = fanfare().courses!.users[c.user];
     if (!u) return null;
     const title = c.url ? (
       <a href={c.url} className="FanfareWidget-sub FanfareWidget-course">
@@ -150,8 +167,8 @@ export default class Widget extends Component {
   }
 
   /** ref: the course completion a Congratulate is for. */
-  wishButton(id, kind, name, ref) {
-    const data = app.data.fanfare;
+  wishButton(id: number, kind: Kind, name: string | undefined, ref?: number) {
+    const data = fanfare();
     if (!data.canWish || Number(app.session.user?.id()) === id) return null;
     const key = kind + ':' + (kind === 'course' ? ref : id);
 
@@ -176,12 +193,16 @@ export default class Widget extends Component {
     );
   }
 
-  wish(id, kind, name, ref, key) {
+  wish(id: number, kind: Kind, name: string | undefined, ref: number | undefined, key: string) {
     this.busy = true;
     app
-      .request({ method: 'POST', url: app.forum.attribute('apiUrl') + '/fanfare/wishes', body: { userId: id, kind, achievementId: ref } })
+      .request({
+        method: 'POST',
+        url: app.forum.attribute('apiUrl') + '/fanfare-wishes',
+        body: { data: { type: 'fanfare-wishes', attributes: { userId: id, kind, achievementId: ref ?? null } } },
+      })
       .then(() => {
-        const data = app.data.fanfare;
+        const data = fanfare();
         data.wished = [...(data.wished || []), key];
         app.alerts.show({ type: 'success' }, t(kind === 'course' ? 'widget.congratulate_sent' : 'widget.wish_sent', { name }));
       })
@@ -192,7 +213,25 @@ export default class Widget extends Component {
   }
 }
 
-function avatar(u) {
+/** A group of the widget: its heading, its rows and how many more there are. */
+function group(emoji: string, heading: Mithril.Children, rows: Mithril.Children, rest: Mithril.Children) {
+  return (
+    <div className="FanfareWidget-group">
+      <h4 className="FanfareWidget-heading">
+        {emoji + ' '}
+        {heading}
+      </h4>
+      {rows}
+      {rest}
+    </div>
+  );
+}
+
+function more(n: number, strip: boolean) {
+  return n > 0 && !strip ? <div className="FanfareWidget-more">{t('widget.more', { count: n })}</div> : null;
+}
+
+function avatar(u: PersonUser) {
   return u.avatar ? (
     <img className="Avatar FanfareWidget-avatar" src={u.avatar} alt="" loading="lazy" />
   ) : (

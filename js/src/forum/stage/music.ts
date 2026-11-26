@@ -3,7 +3,14 @@
  * no audio files, nothing to license. All melodies are public domain or our
  * own. Nothing plays without a tap.
  */
-export const TUNES = {
+/** A tune: its title, tempo and notes as [midi, beats]. */
+export interface Tune {
+  title: string;
+  bpm: number;
+  notes: [number, number][];
+}
+
+export const TUNES: Record<string, Tune> = {
   birthday: {
     title: 'Happy Birthday',
     bpm: 104,
@@ -193,25 +200,45 @@ export const TUNES = {
   },
 };
 
-let audio = null;
-let stop = null;
+let audio: AudioContext | null = null;
+let stop: (() => void) | null = null;
 
 export function stopTune() {
   if (stop) stop();
 }
 
 /** Play a tune on a button with .lbl / .prog / .eq inside; a second tap stops it. */
-export function playTune(id, btn, playingLabel) {
+export function playTune(id: string | null, btn: HTMLElement, playingLabel: string) {
   if (stop) {
     stop();
     return;
   }
-  const tune = TUNES[id];
+  const tune = TUNES[id as string];
   if (!tune) return;
-  audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+  audio = audio || new (window.AudioContext || window.webkitAudioContext!)();
   audio.resume();
   const ctx = audio,
-    out = ctx.createGain();
+    { out, wet } = musicBox(ctx);
+  const { end, nodes } = schedule(ctx, tune, out);
+  const total = (end - ctx.currentTime) * 1000;
+  const finish = progress(btn, playingLabel, total);
+  stop = () => {
+    nodes.forEach((n) => {
+      try {
+        n.stop();
+      } catch (e) {
+        // A note that already ended throws on stop(); there is nothing left to silence.
+      }
+    });
+    out.disconnect();
+    wet.disconnect();
+    finish();
+  };
+}
+
+/** The music box's output: a gain into the speakers, and an echo beside it. */
+function musicBox(ctx: AudioContext) {
+  const out = ctx.createGain();
   out.gain.value = 0.4;
   // a tiny echo for a music-box room
   const delay = ctx.createDelay(),
@@ -226,9 +253,14 @@ export function playTune(id, btn, playingLabel) {
   fb.connect(delay);
   delay.connect(wet);
   wet.connect(ctx.destination);
+  return { out, wet };
+}
+
+/** Every note, three partials each, scheduled from now; returns when the last one ends and the oscillators. */
+function schedule(ctx: AudioContext, tune: Tune, out: GainNode) {
   const beat = 60 / tune.bpm;
   let t = ctx.currentTime + 0.05;
-  const nodes = [];
+  const nodes: OscillatorNode[] = [];
   for (const [midi, beats] of tune.notes) {
     const f = 440 * Math.pow(2, (midi - 69) / 12),
       len = beats * beat;
@@ -236,7 +268,7 @@ export function playTune(id, btn, playingLabel) {
       ['triangle', 1, 0.55],
       ['sine', 2, 0.18],
       ['sine', 3.01, 0.05],
-    ]) {
+    ] as [OscillatorType, number, number][]) {
       const o = ctx.createOscillator(),
         g = ctx.createGain();
       o.type = type;
@@ -252,13 +284,17 @@ export function playTune(id, btn, playingLabel) {
     }
     t += len;
   }
-  const total = (t - ctx.currentTime) * 1000;
+  return { end: t, nodes };
+}
+
+/** The button shows the tune playing, with its progress; returns what puts it back. */
+function progress(btn: HTMLElement, playingLabel: string, total: number) {
   const start = performance.now();
   btn.classList.add('playing');
-  const label = btn.querySelector('.lbl'),
+  const label = btn.querySelector('.lbl')!,
     was = label.textContent;
   label.textContent = playingLabel;
-  const prog = btn.querySelector('.prog');
+  const prog = btn.querySelector<HTMLElement>('.prog')!;
   let raf = 0;
   const tick = () => {
     prog.style.width = Math.min(100, ((performance.now() - start) / total) * 100) + '%';
@@ -274,16 +310,5 @@ export function playTune(id, btn, playingLabel) {
     prog.style.width = '0';
     stop = null;
   }
-  stop = () => {
-    nodes.forEach((n) => {
-      try {
-        n.stop();
-      } catch (e) {
-        // A note that already ended throws on stop(); there is nothing left to silence.
-      }
-    });
-    out.disconnect();
-    wet.disconnect();
-    finish();
-  };
+  return finish;
 }

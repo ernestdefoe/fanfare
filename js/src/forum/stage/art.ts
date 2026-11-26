@@ -1,7 +1,5 @@
 /* The centrepieces, drawn in code: no images to download. viewBox 600 x 700 each. */
-export const nr = (n) => Math.round(n * 10) / 10;
-export let seed = 7;
-export const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+export const nr = (n: number) => Math.round(n * 10) / 10;
 
 export const DEFS = `
   <pattern id="ff-stripes" width="11" height="11" patternUnits="userSpaceOnUse" patternTransform="rotate(38)"><rect width="4.5" height="11" fill="rgba(255,255,255,.6)"/></pattern>
@@ -13,7 +11,7 @@ export const DEFS = `
   <linearGradient id="ff-gold" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#fff0b0"/><stop offset=".45" stop-color="#e9b949"/><stop offset="1" stop-color="#a8761d"/></linearGradient>
   <filter id="ff-blur" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="4"/></filter>`;
 
-export function flame(x, base, s = 1, delay = 0) {
+export function flame(x: number, base: number, s = 1, delay = 0) {
   const t = base,
     h = 44 * s,
     w = 11 * s;
@@ -25,148 +23,17 @@ export function flame(x, base, s = 1, delay = 0) {
     </g></g>`;
 }
 
-export function tier({ id, cx = 300, rx, top, bot, ry, side, icing, shade, drips, bead }) {
-  let edge = '';
-  for (let i = 0; i <= 140; i++) {
-    const a = (i / 140) * Math.PI;
-    let y = top + ry * Math.sin(a) + 8;
-    for (const [at, len, w] of drips) y += len * Math.exp(-(((a - at) / w) ** 2));
-    edge += ` L${nr(cx - rx * Math.cos(a))} ${nr(y)}`;
-  }
-  const drip = `M${cx - rx} ${top}${edge} L${cx + rx} ${top}Z`;
-  let beads = '';
-  const n = Math.round(rx / 8.5);
-  for (let i = 0; i <= n; i++) {
-    const a = (i / n) * Math.PI;
-    beads += `<circle cx="${nr(cx - rx * Math.cos(a))}" cy="${nr(bot + ry * Math.sin(a))}" r="${bead}" fill="url(#ff-bead)"/>`;
-  }
-  return `<linearGradient id="ff-${id}"><stop offset="0" stop-color="${side[1]}"/><stop offset=".28" stop-color="${side[0]}"/><stop offset=".62" stop-color="${side[0]}"/><stop offset="1" stop-color="${side[2]}"/></linearGradient>
-    <path d="M${cx - rx} ${top} L${cx - rx} ${bot} A${rx} ${ry} 0 0 0 ${cx + rx} ${bot} L${cx + rx} ${top}Z" fill="url(#ff-${id})"/>
-    <path d="${drip}" fill="${shade}" transform="translate(0 5)"/><path d="${drip}" fill="${icing}"/>
-    <ellipse cx="${cx}" cy="${top}" rx="${rx}" ry="${ry}" fill="${icing}"/>
-    <ellipse cx="${cx - rx * 0.08}" cy="${top - 3}" rx="${rx * 0.82}" ry="${ry * 0.62}" fill="#fff" opacity=".35"/>${beads}`;
-}
-
-export const cherry = (x, y) => `<path d="M${x} ${y - 8} q3 -14 13 -19" stroke="#3f7d3a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-  <circle cx="${x}" cy="${y}" r="10.5" fill="url(#ff-cherry)"/><circle cx="${x - 3.5}" cy="${y - 3.5}" r="3" fill="#fff" opacity=".75"/>`;
-
-export function sprinkles(x0, y0, x1, y1, n, ellipse) {
-  const cols = ['#ff6b9a', '#ffd166', '#5dade2', '#58d68d', '#ffffff', '#b39cff'];
-  let s = '';
-  for (let i = 0; i < n; i++) {
-    let x, y;
-    if (ellipse) {
-      const a = rnd() * 6.283,
-        r = Math.sqrt(rnd());
-      x = x0 + Math.cos(a) * x1 * r;
-      y = y0 + Math.sin(a) * y1 * r;
-    } else {
-      x = x0 + rnd() * (x1 - x0);
-      y = y0 + rnd() * (y1 - y0);
-    }
-    s += `<rect x="${nr(x)}" y="${nr(y)}" width="9" height="2.8" rx="1.4" fill="${cols[i % cols.length]}" transform="rotate(${nr(rnd() * 180)} ${nr(x)} ${nr(y)})"/>`;
-  }
-  return s;
-}
-
-export function cakeSVG() {
-  seed = 7;
-  const xs = [214, 257, 300, 343, 386],
-    bases = [151, 156, 158, 156, 151],
-    cols = ['#7ee0ff', '#ffd166', '#ff8fb8', '#b39cff', '#7be3a7'];
-  const candles = xs
-    .map((x, i) => {
-      const b = bases[i],
-        h = 64,
-        t = b - h;
-      return `<g class="Lamp Candle" data-i="${i}" tabindex="0" role="button" aria-label="Blow out candle ${i + 1}">
-      <rect x="${x - 22}" y="${t - 60}" width="44" height="${h + 60}" fill="transparent"/>
-      <rect x="${x - 8}" y="${t}" width="16" height="${h}" rx="4" fill="${cols[i]}"/>
-      <rect x="${x - 8}" y="${t}" width="16" height="${h}" rx="4" fill="url(#ff-stripes)"/>
-      <rect x="${x - 6}" y="${t + 2}" width="4" height="${h - 4}" rx="2" fill="#fff" opacity=".4"/>
-      <path d="M${x} ${t} v-9" stroke="#3b2a22" stroke-width="2.4" stroke-linecap="round"/>
-      ${flame(x, t - 7, 1, -i * 0.07)}<g class="Smoke"></g></g>`;
-    })
-    .join('');
-  return `<svg viewBox="0 0 600 700"><defs>${DEFS}</defs>
-    <ellipse cx="300" cy="684" rx="290" ry="16" fill="rgba(0,0,0,.28)"/>
-    <ellipse cx="300" cy="666" rx="298" ry="30" fill="url(#ff-plate)"/><ellipse cx="300" cy="660" rx="284" ry="23" fill="#fbfcff"/>
-    ${tier({
-      id: 't1',
-      rx: 262,
-      top: 448,
-      bot: 640,
-      ry: 34,
-      side: ['#fff1dc', '#fffaf1', '#ebc89a'],
-      icing: '#f78fb3',
-      shade: '#d4608b',
-      bead: 7.5,
-      drips: [
-        [0.18, 30, 0.07],
-        [0.48, 40, 0.06],
-        [0.82, 20, 0.07],
-        [1.2, 9, 0.08],
-        [1.57, 6, 0.1],
-        [1.94, 9, 0.08],
-        [2.32, 20, 0.07],
-        [2.66, 40, 0.06],
-        [2.96, 30, 0.07],
-      ],
-    })}
-    ${cherry(70, 462)}${cherry(530, 462)}${cherry(116, 476)}${cherry(484, 476)}
-    ${tier({
-      id: 't2',
-      rx: 205,
-      top: 258,
-      bot: 452,
-      ry: 28,
-      side: ['#f7a3c3', '#ffc6dc', '#dc7aa2'],
-      icing: '#fffaf4',
-      shade: '#ead6c8',
-      bead: 6.5,
-      drips: [
-        [0.22, 18, 0.08],
-        [0.6, 12, 0.07],
-        [0.98, 18, 0.08],
-        [1.38, 7, 0.08],
-        [1.76, 7, 0.08],
-        [2.16, 18, 0.08],
-        [2.54, 12, 0.07],
-        [2.92, 18, 0.08],
-      ],
-    })}
-    ${cherry(118, 274)}${cherry(482, 274)}
-    ${tier({
-      id: 't3',
-      rx: 130,
-      top: 140,
-      bot: 262,
-      ry: 22,
-      side: ['#bea8ee', '#d8c9f8', '#8e72d4'],
-      icing: '#fffaf4',
-      shade: '#e2d6f2',
-      bead: 5.5,
-      drips: [
-        [0.3, 22, 0.1],
-        [0.8, 30, 0.09],
-        [1.3, 16, 0.1],
-        [1.8, 30, 0.09],
-        [2.3, 18, 0.1],
-        [2.8, 24, 0.1],
-      ],
-    })}
-    ${sprinkles(185, 200, 415, 250, 26)}${sprinkles(300, 140, 112, 16, 18, true)}
-    ${candles}</svg>`;
-}
-
-export const pts = (a) => a.map(([x, y]) => `${nr(x)},${nr(y)}`).join(' ');
+export const pts = (a: [number, number][]) => a.map(([x, y]) => `${nr(x)},${nr(y)}`).join(' ');
 export const GOLD_STOPS = `<stop offset="0" stop-color="#a8761d"/><stop offset=".35" stop-color="#f6d27a"/><stop offset=".5" stop-color="#fff3c4"/><stop offset=".65" stop-color="#e9b949"/><stop offset="1" stop-color="#9a6a16"/>`;
 
 /* Christmas: a wrapped present (3/4 view), gold ribbon and bow; the tag is HTML so it can swing */
 export function presentSVG() {
-  const flake = (x, y, s, c) =>
+  const flake = (x: number, y: number, s: number, c: string) =>
     `<g stroke="${c}" stroke-width="${1.6 * s}" stroke-linecap="round">${[0, 60, 120].map((a) => `<path d="M${x} ${y - 7 * s} V${y + 7 * s}" transform="rotate(${a} ${x} ${y})"/>`).join('')}</g>`;
-  const patt = (id, tf) => `<pattern id="ff-${id}" width="56" height="56" patternUnits="userSpaceOnUse"${tf ? ` patternTransform="${tf}"` : ''}>
+  const patt = (
+    id: string,
+    tf?: string
+  ) => `<pattern id="ff-${id}" width="56" height="56" patternUnits="userSpaceOnUse"${tf ? ` patternTransform="${tf}"` : ''}>
       ${flake(14, 14, 1, 'rgba(255,255,255,.55)')}${flake(42, 42, 0.7, 'rgba(255,226,140,.7)')}
       <circle cx="42" cy="12" r="2" fill="rgba(255,226,140,.8)"/><circle cx="12" cy="44" r="1.6" fill="rgba(255,255,255,.6)"/></pattern>`;
   return `<svg viewBox="0 0 600 700"><defs>${DEFS}
@@ -266,7 +133,7 @@ export function presentSVG() {
 }
 
 /* top-of-screen garlands: twinkling lights (Christmas) or bunting (forum birthday) */
-export function topDeco(kind) {
+export function topDeco(kind: string) {
   const W = innerWidth,
     span = W < 600 ? 190 : 300,
     sag = W < 600 ? 42 : 62,
@@ -304,7 +171,7 @@ export function topDeco(kind) {
 
 /* Lunar New Year: a big silk lantern that drops in, with firecracker strings */
 export function lanternBigSVG() {
-  const crackers = (x, side) => {
+  const crackers = (x: number, side: number) => {
     let s = `<path d="M${x} -700 V560" stroke="#c9962f" stroke-width="2.5"/>`;
     for (let i = 0, y = 90; y < 540; i++, y += 30) {
       const rot = (i % 2 ? 28 : -28) * side;
@@ -345,18 +212,18 @@ export function menorahSVG(night = 4) {
   for (let k = 1; k <= 4; k++) slots.push(300 + 45 * k);
   for (let k = 1; k <= 4; k++)
     arms += `<path d="M${300 - 45 * k} ${cy} A${45 * k} ${45 * k} 0 0 0 ${300 + 45 * k} ${cy}" fill="none" stroke="url(#ff-menG)" stroke-width="11" stroke-linecap="round"/>`;
-  const cup = (x, y) =>
+  const cup = (x: number, y: number) =>
     `<path d="M${x - 15} ${y - 10} H${x + 15} L${x + 9} ${y + 4} H${x - 9}Z" fill="url(#ff-menG)"/><ellipse cx="${x}" cy="${y - 10}" rx="15" ry="4" fill="#fff3c4"/>`;
   slots.forEach((x) => (cups += cup(x, cy)));
   cups += cup(300, 286);
   // candles fill from the right; tonight's are lit newest (leftmost) first
   const tonight = slots.slice(8 - night);
   const candle = (
-    x,
-    top,
-    h,
-    c,
-    order
+    x: number,
+    top: number,
+    h: number,
+    c: string,
+    order: number
   ) => `<g class="Lamp" data-order="${order}"><rect x="${x - 6}" y="${top}" width="12" height="${h}" rx="3" fill="${c}"/><rect x="${x - 6}" y="${top}" width="12" height="${h}" rx="3" fill="url(#ff-stripes)" opacity=".5"/>
       <path d="M${x} ${top} v-7" stroke="#2b2b2b" stroke-width="2" stroke-linecap="round"/>${flame(x, top - 5, 0.78, -order * 0.05)}</g>`;
   candles += candle(300, 226, 50, '#f4f6fb', 0);
@@ -373,7 +240,7 @@ export function menorahSVG(night = 4) {
 
 /* Eid: a crescent moon with hanging lanterns and twinkling stars */
 export function eidSVG() {
-  const fanoos = (x, top, len, i) => {
+  const fanoos = (x: number, top: number, len: number, i: number) => {
     const y = top + len;
     return `<path d="M${x} ${top} V${y}" stroke="#d9b45a" stroke-width="2"/>
       <g class="Lamp noscale" data-i="${i}">
@@ -385,7 +252,7 @@ export function eidSVG() {
         <path class="Flame" d="M${x - 17} ${y + 28} H${x - 3} V${y + 70} H${x - 15}Z M${x + 3} ${y + 28} H${x + 17} L${x + 15} ${y + 70} H${x + 3}Z" fill="#ffd36b"/>
         <path d="M${x - 22} ${y + 78} H${x + 22} L${x + 12} ${y + 92} H${x - 12}Z" fill="url(#ff-menG)"/><circle cx="${x}" cy="${y + 98}" r="5" fill="url(#ff-menG)"/></g>`;
   };
-  const sparkle = (x, y, s, d) =>
+  const sparkle = (x: number, y: number, s: number, d: number) =>
     `<path class="twk" style="animation-delay:${d}s" d="M${x} ${y - 12 * s} Q${x + 2 * s} ${y - 2 * s} ${x + 12 * s} ${y} Q${x + 2 * s} ${y + 2 * s} ${x} ${y + 12 * s} Q${x - 2 * s} ${y + 2 * s} ${x - 12 * s} ${y} Q${x - 2 * s} ${y - 2 * s} ${x} ${y - 12 * s}Z" fill="#fff3c4"/>`;
   return `<svg viewBox="0 0 600 700"><defs>${DEFS}
       <linearGradient id="ff-menG" x1="0" x2="1">${GOLD_STOPS}</linearGradient>
@@ -400,13 +267,15 @@ export function eidSVG() {
 
 /* Halloween: a carved jack-o'-lantern that lights up, a moon, and bats flying out */
 export function pumpkinSVG() {
-  const lobes = [
-    [-150, 118, '#d9480f'],
-    [150, 118, '#d9480f'],
-    [-82, 142, '#f76707'],
-    [82, 142, '#f76707'],
-    [0, 152, '#ff922b'],
-  ]
+  const lobes = (
+    [
+      [-150, 118, '#d9480f'],
+      [150, 118, '#d9480f'],
+      [-82, 142, '#f76707'],
+      [82, 142, '#f76707'],
+      [0, 152, '#ff922b'],
+    ] as [number, number, string][]
+  )
     .map(
       ([dx, rx, c]) =>
         `<ellipse cx="${300 + dx}" cy="430" rx="${rx}" ry="178" fill="${c}"/><ellipse cx="${300 + dx}" cy="430" rx="${rx}" ry="178" fill="url(#ff-pShade)"/>`
@@ -414,7 +283,12 @@ export function pumpkinSVG() {
     .join('');
   const face = `M206 352 L256 312 L268 372Z M394 352 L344 312 L332 372Z M300 392 L318 430 H282Z
     M176 452 Q300 560 424 452 L404 470 L388 452 L366 488 L346 468 L322 500 L300 474 L278 500 L254 468 L234 488 L212 452 L196 470Z`;
-  const bat = (tx, ty, s, d) => `<g class="Bat" style="--tx:${tx}px;--ty:${ty}px;--s:${s};animation-delay:${d}s"><g class="wing">
+  const bat = (
+    tx: number,
+    ty: number,
+    s: number,
+    d: number
+  ) => `<g class="Bat" style="--tx:${tx}px;--ty:${ty}px;--s:${s};animation-delay:${d}s"><g class="wing">
       <path d="M0 0 C-10 -10 -24 -12 -34 -4 C-28 -2 -26 4 -28 8 C-22 4 -16 6 -14 10 C-10 4 -4 4 0 6 C4 4 10 4 14 10 C16 6 22 4 28 8 C26 4 28 -2 34 -4 C24 -12 10 -10 0 0Z" fill="#1d1426"/></g>
       <circle cx="-3" cy="1" r="1.3" fill="#ffb347"/><circle cx="3" cy="1" r="1.3" fill="#ffb347"/></g>`;
   return `<svg viewBox="0 0 600 700"><defs>${DEFS}
@@ -435,7 +309,7 @@ export function pumpkinSVG() {
 /* Thanksgiving: an autumn leaf wreath that grows in, with a burlap bow */
 export function wreathSVG() {
   const leaf = 'M0 -30 L6 -14 L18 -20 L14 -6 L28 -4 L16 6 L20 18 L6 12 L2 26 L-2 26 L-6 12 L-20 18 L-16 6 L-28 -4 L-14 -6 L-18 -20 L-6 -14Z';
-  const ring = (n, r, s, off, cols) =>
+  const ring = (n: number, r: number, s: number, off: number, cols: string[]) =>
     Array.from(
       { length: n },
       (_, i) =>
@@ -457,11 +331,11 @@ export function wreathSVG() {
 /* The forum's own birthday: a foil number balloon, a balloon bunch and a plaque */
 export function forumSVG(age = 6) {
   const b = (
-    x,
-    y,
-    r,
-    c,
-    d
+    x: number,
+    y: number,
+    r: number,
+    c: string,
+    d: number
   ) => `<g class="Bob" style="animation-delay:${d}s"><path d="M${x} ${y + r} Q${x + (300 - x) * 0.3} ${y + r + 80} 300 548" stroke="rgba(255,255,255,.55)" stroke-width="1.6" fill="none"/>
       <ellipse cx="${x}" cy="${y}" rx="${r * 0.86}" ry="${r}" fill="${c}"/><ellipse cx="${x}" cy="${y}" rx="${r * 0.86}" ry="${r}" fill="url(#ff-bShade)"/>
       <ellipse cx="${x - r * 0.3}" cy="${y - r * 0.38}" rx="${r * 0.16}" ry="${r * 0.28}" fill="#fff" opacity=".6" transform="rotate(-25 ${x - r * 0.3} ${y - r * 0.38})"/>
@@ -501,15 +375,15 @@ export function clockSVG() {
 }
 
 export function rangoliSVG() {
-  const petal = (r0, r1, w) =>
+  const petal = (r0: number, r1: number, w: number) =>
     `M300 ${262 - r0} C${300 - w} ${nr(262 - r0 - (r1 - r0) * 0.35)} ${300 - w * 0.7} ${nr(262 - r1 + (r1 - r0) * 0.2)} 300 ${262 - r1} C${300 + w * 0.7} ${nr(262 - r1 + (r1 - r0) * 0.2)} ${300 + w} ${nr(262 - r0 - (r1 - r0) * 0.35)} 300 ${262 - r0}Z`;
-  const ring = (n, r0, r1, w, cols, dot) =>
+  const ring = (n: number, r0: number, r1: number, w: number, cols: string[], dot?: boolean) =>
     Array.from(
       { length: n },
       (_, i) =>
         `<g transform="rotate(${nr((360 / n) * i)} 300 262)"><path d="${petal(r0, r1, w)}" fill="${cols[i % cols.length]}"/>${dot ? `<circle cx="300" cy="${262 - (r0 + r1) / 2}" r="3.4" fill="#fff8e1"/>` : ''}</g>`
     ).join('');
-  const dots = (n, r, s, c) =>
+  const dots = (n: number, r: number, s: number, c: string) =>
     Array.from({ length: n }, (_, i) => {
       const a = (i / n) * 6.283;
       return `<circle cx="${nr(300 + Math.cos(a) * r)}" cy="${nr(262 + Math.sin(a) * r)}" r="${s}" fill="${c}"/>`;
@@ -533,15 +407,15 @@ export function rangoliSVG() {
     ${diyas}</svg>`;
 }
 
-export function medalSVG(years) {
+export function medalSVG(years: number) {
   const pleats = Array.from({ length: 36 }, (_, i) => {
     const a0 = (i / 36) * 6.283,
       a1 = ((i + 1) / 36) * 6.283,
       am = (a0 + a1) / 2;
-    const p = (a, r) => `${nr(300 + Math.cos(a) * r)} ${nr(250 + Math.sin(a) * r)}`;
+    const p = (a: number, r: number) => `${nr(300 + Math.cos(a) * r)} ${nr(250 + Math.sin(a) * r)}`;
     return `<path d="M${p(a0, 170)} L${p(am, 240)} L${p(a1, 170)}Z" fill="${i % 2 ? '#3f5f8f' : '#5b7db3'}"/>`;
   }).join('');
-  const star = (cx, cy, r1, r2) =>
+  const star = (cx: number, cy: number, r1: number, r2: number) =>
     Array.from({ length: 10 }, (_, i) => {
       const a = -Math.PI / 2 + (i * Math.PI) / 5,
         r = i % 2 ? r2 : r1;
@@ -556,7 +430,8 @@ export function medalSVG(years) {
     return `<g class="Lamp YearStar" data-i="${i}"><circle class="Flame" style="transform-origin:${nr(x)}px ${nr(y)}px" cx="${nr(x)}" cy="${nr(y)}" r="26" fill="url(#ff-glow)"/>
       <polygon points="${star(x, y, 15, 6.5)}" fill="#1e2d4d"/><polygon class="Flame" style="transform-origin:${nr(x)}px ${nr(y)}px" points="${star(x, y, 15, 6.5)}" fill="url(#ff-gold)"/></g>`;
   }).join('');
-  const leaf = (x, y, rot) => `<ellipse cx="${x}" cy="${y}" rx="13" ry="5" transform="rotate(${rot} ${x} ${y})" fill="url(#ff-gold)"/>`;
+  const leaf = (x: number, y: number, rot: number) =>
+    `<ellipse cx="${x}" cy="${y}" rx="13" ry="5" transform="rotate(${rot} ${x} ${y})" fill="url(#ff-gold)"/>`;
   let laurel = '';
   for (let i = 0; i < 9; i++) {
     for (const side of [1, -1]) {
@@ -583,4 +458,5 @@ export function medalSVG(years) {
     <rect x="80" y="494" width="440" height="198" rx="26" fill="url(#ff-plaque2)" stroke="url(#ff-gold)" stroke-width="4"/></svg>`;
 }
 
+export { cakeSVG } from './art-cake';
 export { gradSVG, rosetteSVG } from './art-days';

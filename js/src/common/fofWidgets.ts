@@ -1,4 +1,5 @@
 import { extend } from 'flarum/common/extend';
+import type Mithril from 'mithril';
 
 /**
  * fof/forum-widgets-core, shared by the forum (which renders the widgets) and
@@ -13,19 +14,56 @@ import { extend } from 'flarum/common/extend';
  * editor's list of available widgets.
  */
 
-/** A module of fof/forum-widgets-core, at runtime — never a build-time import. */
-export function fof(path) {
-  const mod = globalThis.flarum?.reg?.get?.('fof-forum-widgets-core', path);
+/** The parts of fof/forum-widgets-core's state Fanfare reads; FoF ships no typings to import. */
+interface WidgetInstance {
+  id?: string;
+}
+
+interface WidgetsConfig {
+  instances?: (WidgetInstance | null)[];
+  disabled?: string[];
+}
+
+interface WidgetsManager {
+  config?: WidgetsConfig;
+  widgets: { extension: string }[];
+}
+
+export interface EditorWidget {
+  key: string;
+  icon: string;
+  title: () => Mithril.Children;
+  placement?: string;
+}
+
+/** An app that may carry FoF's widget manager. */
+export const widgetsOf = (app: object): WidgetsManager | undefined => (app as { widgets?: WidgetsManager }).widgets;
+
+/** The `flarum` global: its extension list and module registry. */
+interface FlarumGlobal {
+  flarum?: {
+    extensions?: Record<string, unknown>;
+    reg?: { get?: (extension: string, path: string) => { default?: unknown } | undefined };
+  };
+}
+
+/**
+ * A module of fof/forum-widgets-core, at runtime — never a build-time import.
+ * any: a module of another extension, with no typings to give it.
+ */
+export function fof(path: string): any {
+  const mod = (globalThis as FlarumGlobal).flarum?.reg?.get?.('fof-forum-widgets-core', path);
   return mod?.default ?? mod;
 }
 
-export function hasFofWidgets() {
-  return !!globalThis.flarum?.extensions && 'fof-forum-widgets-core' in globalThis.flarum.extensions;
+export function hasFofWidgets(): boolean {
+  const flarum = (globalThis as FlarumGlobal).flarum;
+  return !!flarum?.extensions && 'fof-forum-widgets-core' in flarum.extensions;
 }
 
 /** Whether the saved layout places this widget in a section. */
-export function placed(app, extension, key) {
-  return (app.widgets?.config?.instances || []).some((i) => i?.id === `${extension}:${key}`);
+export function placed(app: object, extension: string, key: string): boolean {
+  return (widgetsOf(app)?.config?.instances || []).some((i) => i?.id === `${extension}:${key}`);
 }
 
 /**
@@ -35,17 +73,17 @@ export function placed(app, extension, key) {
  * into a section — FoF would otherwise draw it placed, while the forum rightly
  * shows nothing until it is saved.
  *
- * @param {object} app the admin app
- * @param {string} extension the extension id
- * @param {{ key: string, icon: string, title: () => any, placement?: string }[]} widgets
+ * @param app the admin app
+ * @param extension the extension id
+ * @param widgets the widgets to offer
  */
-export function registerEditorWidgets(app, extension, widgets) {
+export function registerEditorWidgets(app: object, extension: string, widgets: EditorWidget[]): void {
   const Widgets = fof('common/extend/Widgets');
   const WidgetEditor = fof('admin/components/WidgetEditor');
   if (!Widgets || !WidgetEditor) return;
 
-  extend(WidgetEditor.prototype, 'oninit', function () {
-    const manager = app.widgets;
+  extend(WidgetEditor.prototype, 'oninit', function (this: { config?: WidgetsConfig; oninit(): void }) {
+    const manager = widgetsOf(app);
     if (!manager) return;
 
     if (!manager.widgets.some((w) => w.extension === extension)) {
@@ -65,8 +103,8 @@ export function registerEditorWidgets(app, extension, widgets) {
       add.extend(app, extension);
     }
 
-    const config = this.config || {};
-    const disabled = config.disabled || [];
+    const config: WidgetsConfig = this.config || {};
+    const disabled: string[] = config.disabled || [];
     const unplaced = widgets
       .map((w) => `${extension}:${w.key}`)
       .filter((id) => !disabled.includes(id) && !(config.instances || []).some((i) => i?.id === id));

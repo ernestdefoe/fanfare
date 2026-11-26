@@ -1,12 +1,14 @@
 import app from 'flarum/admin/app';
-import Component from 'flarum/common/Component';
+import Component, { type ComponentAttrs } from 'flarum/common/Component';
+import type Stream from 'flarum/common/utils/Stream';
 import Switch from 'flarum/common/components/Switch';
 import Select from 'flarum/common/components/Select';
+import type Mithril from 'mithril';
 
 const NS = 'ernestdefoe-fanfare';
-const t = (key, params) => app.translator.trans(`${NS}.admin.${key}`, params);
+const t = (key: string, params: Record<string, unknown> = {}) => app.translator.trans(`${NS}.admin.${key}`, params);
 
-const EMOJI = {
+const EMOJI: Record<string, string> = {
   newyear: '🎆',
   christmas: '🎁',
   thanksgiving: '🍂',
@@ -19,12 +21,42 @@ const EMOJI = {
   hanukkah: '🕎',
 };
 
+/** An occasion in the server's catalogue: on by default, from Festoon, and whether it takes a day's shift. */
+interface CatalogueEntry {
+  on: boolean;
+  festoon?: boolean;
+  shift?: boolean;
+}
+
+/** One occasion as stored in the setting: the admin's switch and shift. */
+interface StoredOccasion {
+  on?: boolean;
+  shift?: number;
+}
+
+export interface OccasionsData {
+  catalogue?: Record<string, CatalogueEntry>;
+  custom?: Record<string, { emoji?: string; name?: string }>;
+  next?: Record<string, string>;
+  festoon?: boolean;
+  timezone?: string;
+}
+
+export interface OccasionsAttrs extends ComponentAttrs {
+  setting: Stream<string>;
+  data: OccasionsData;
+}
+
 /**
  * The occasions table: on or off, the next date (worked out on the server),
  * a day's shift for moon-sighted holidays, and a preview of the moment. All of
  * it is one JSON setting, saved with the page's Save button.
  */
-export default class Occasions extends Component {
+export default class Occasions extends Component<OccasionsAttrs> {
+  stored: Record<string, StoredOccasion> = {};
+  base = '';
+  fmt!: Intl.DateTimeFormat;
+
   view() {
     const { setting, data } = this.attrs;
     this.stored = parse(setting());
@@ -70,16 +102,23 @@ export default class Occasions extends Component {
     );
   }
 
-  row(id, onByDefault, emoji, label, fromFestoon, shift) {
+  row(
+    id: string,
+    onByDefault: boolean,
+    emoji: string | undefined,
+    label: Mithril.Children,
+    fromFestoon: boolean | undefined,
+    shift: boolean | undefined
+  ) {
     const { setting, data } = this.attrs;
     const row = this.stored[id] || {};
     const next = data.next?.[id];
-    const update = (change) => setting(JSON.stringify({ ...this.stored, [id]: { ...row, ...change } }));
+    const update = (change: StoredOccasion) => setting(JSON.stringify({ ...this.stored, [id]: { ...row, ...change } }));
 
     return (
       <tr key={id}>
         <td className="FanfareOccasions-name">
-          <Switch state={row.on ?? onByDefault} onchange={(v) => update({ on: v })}>
+          <Switch state={row.on ?? onByDefault} onchange={(v: boolean) => update({ on: v })}>
             <span aria-hidden="true">{emoji}</span> {label}
           </Switch>
           {fromFestoon ? <span className="FanfareOccasions-festoon">{t('settings.from_festoon')}</span> : null}
@@ -90,7 +129,7 @@ export default class Occasions extends Component {
             <Select
               value={String(row.shift || 0)}
               options={{ '-1': t('settings.shift_minus'), 0: t('settings.shift_0'), 1: t('settings.shift_plus') }}
-              onchange={(v) => update({ shift: Number(v) })}
+              onchange={(v: string) => update({ shift: Number(v) })}
             />
           ) : null}
         </td>
@@ -104,7 +143,7 @@ export default class Occasions extends Component {
   }
 }
 
-function parse(value) {
+function parse(value: string): Record<string, StoredOccasion> {
   try {
     const v = JSON.parse(value || '{}');
     return v && typeof v === 'object' ? v : {};
