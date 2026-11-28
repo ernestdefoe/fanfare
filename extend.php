@@ -78,7 +78,9 @@ return [
         ->registerPreference('fanfareEffects', fn ($value) => (bool) $value, true)
         ->registerPreference('fanfareSeen', fn ($value) => substr((string) $value, 0, 64), '')
         // The newest course completion whose moment already opened by itself.
-        ->registerPreference('fanfareCourseSeen', fn ($value) => max(0, (int) $value), 0),
+        ->registerPreference('fanfareCourseSeen', fn ($value) => max(0, (int) $value), 0)
+        // Today's people put away with the ×: a fingerprint of who was listed then.
+        ->registerPreference('fanfareWidgetClosed', fn ($value) => substr((string) $value, 0, 32), ''),
 
     (new Extend\Console())
         ->command(GreetCommand::class)

@@ -35,6 +35,20 @@
   }
 }
 .FanfareWidget-group + .FanfareWidget-group { margin-top: 10px; }
+// The ×: puts today's people away until someone new is listed. A 32px target.
+.FanfareWidget-close.Button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--muted-color);
+}
+.FanfareWidget-close.Button:hover, .FanfareWidget-close.Button:focus-visible { color: var(--text-color); background: var(--body-bg); }
+.FanfareWidget--sidebar .FanfareWidget-heading:first-child, .FanfareWidget:not(.FanfareWidget--strip) .FanfareWidget-group:first-child .FanfareWidget-heading { padding-right: 34px; }
 .FanfareWidget-heading {
   margin: 2px 0 8px;
   font-size: 12px;
@@ -80,22 +94,30 @@ html:not(#x-hi) .FanfareWidget a.FanfareWidget-course:hover { color: var(--text-
 // there, a strip of chips above the discussion list instead.
 .FanfareWidget--strip {
   display: none;
+  align-items: center;
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  gap: 8px;
+  gap: 4px;
   margin: 0 0 12px;
-  padding: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
+  padding: 8px 4px 8px 8px;
 
+  .FanfareWidget-scroll {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
   .FanfareWidget-group { display: flex; gap: 8px; align-items: center; margin: 0; flex: none; }
   .FanfareWidget-heading { margin: 0 4px; flex: none; white-space: nowrap; }
   .FanfareWidget-row { flex: none; padding: 3px 4px 3px 3px; border-radius: 999px; background: var(--body-bg); }
   .FanfareWidget-name { max-width: 9em; }
+  .FanfareWidget-close.Button { position: static; flex: none; }
 }
-// More chips than fit: the right edge fades until the end is scrolled into view.
-.FanfareWidget--strip.is-more {
+// More chips than fit: the scrolling row fades at the right until its end is in view.
+.FanfareWidget--strip .FanfareWidget-scroll.is-more {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
   mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
 }

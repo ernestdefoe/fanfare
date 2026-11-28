@@ -7,6 +7,7 @@ import stringToColor from 'flarum/common/utils/stringToColor';
 import { peopleToday } from '../today';
 import { t } from '../util';
 import { claim, release, hosted } from '../hosts';
+import { close, isClosed } from '../dismiss';
 import type { AnniversaryPerson, BirthdayPerson, CourseCompletion, FanfareData, PersonUser } from '../types';
 
 export interface WidgetAttrs extends ComponentAttrs {
@@ -68,7 +69,7 @@ export default class Widget extends Component<WidgetAttrs> {
       m.redraw();
     }
 
-    const el = this.element as HTMLElement | undefined;
+    const el = (this.element as HTMLElement | undefined)?.querySelector<HTMLElement>('.FanfareWidget-scroll');
     if (!el) return;
     if (!this.scrollCue) {
       this.scrollCue = () => el.classList.toggle('is-more', el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
@@ -85,34 +86,53 @@ export default class Widget extends Component<WidgetAttrs> {
 
     const courses = data.courses?.list || [];
 
-    if ((!today.birthdays.length && !today.anniversaries.length && !courses.length) || (this.fallback() && hosted())) return null;
+    if ((!today.birthdays.length && !today.anniversaries.length && !courses.length) || (this.fallback() && hosted()) || isClosed(data)) return null;
 
     return (
       <section
         className={'FanfareWidget FanfareWidget--' + this.attrs.host + (strip && this.wide ? ' is-wide' : '')}
         aria-label={t('widget.heading')}
       >
-        {today.birthdays.length
-          ? group(
-              '🎂',
-              strip ? t('widget.today') : t('widget.heading'),
-              this.rows(today.birthdays, 'birthday', strip),
-              more(data.people!.more.birthdays, strip)
-            )
-          : null}
-        {today.anniversaries.length
-          ? group('🏅', t('widget.anniversaries'), this.rows(today.anniversaries, 'anniversary', strip), more(data.people!.more.anniversaries, strip))
-          : null}
-        {courses.length
-          ? group(
-              '🎓',
-              t('widget.courses'),
-              courses.map((c) => this.courseRow(c, strip)),
-              more(data.courses!.more, strip)
-            )
-          : null}
+        <div className="FanfareWidget-scroll">{this.groups(data, strip)}</div>
+        <button
+          type="button"
+          className="Button Button--icon Button--flat FanfareWidget-close"
+          aria-label={t('widget.close')}
+          title={t('widget.close')}
+          onclick={() => close(data)}
+        >
+          <i className="fas fa-xmark" aria-hidden="true" />
+        </button>
       </section>
     );
+  }
+
+  /** The widget's groups: today's birthdays, anniversaries and course completions. */
+  groups(data: FanfareData, strip: boolean): Mithril.Children {
+    const today = peopleToday(data);
+    const courses = data.courses?.list || [];
+
+    return [
+      today.birthdays.length
+        ? group(
+            '🎂',
+            strip ? t('widget.today') : t('widget.heading'),
+            this.rows(today.birthdays, 'birthday', strip),
+            more(data.people!.more.birthdays, strip)
+          )
+        : null,
+      today.anniversaries.length
+        ? group('🏅', t('widget.anniversaries'), this.rows(today.anniversaries, 'anniversary', strip), more(data.people!.more.anniversaries, strip))
+        : null,
+      courses.length
+        ? group(
+            '🎓',
+            t('widget.courses'),
+            courses.map((c) => this.courseRow(c, strip)),
+            more(data.courses!.more, strip)
+          )
+        : null,
+    ];
   }
 
   /** Today's birthdays or anniversaries: each person, and a wish for them. */
